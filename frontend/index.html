@@ -3,216 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Mark Calculator</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='45' cy='45' r='35' fill='%23171717'/><rect x='45' y='45' width='35' height='35' fill='%23E6332A'/></svg>">
+    <title>Semester Marks Calculator</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232563eb'/><text y='72' x='50' text-anchor='middle' font-size='60' font-family='sans-serif' fill='white'>%</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <!-- Flash prevention: apply saved theme before first paint -->
+    <script>
+        (function() {
+            try {
+                var saved = localStorage.getItem('semcalc-theme');
+                if (saved === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch(e) {}
+        })();
+    </script>
 </head>
 <body>
-    <nav class="editorial-nav">
-        <div class="nav-left">E•M•C</div>
-        <div class="nav-center">
-            <a href="#home">HOME</a>
-            <a href="#calculator">CALCULATOR</a>
-            <a href="#how-it-works">HOW IT WORKS</a>
-        </div>
-        <div class="nav-right">
-            STATUS <span class="status-dot">●</span>
-        </div>
-    </nav>
 
-    <main>
-        <section id="home" class="hero-section grid-container">
-            <div class="hero-content">
-                <h1 class="hero-title">KNOW<br>WHAT<br>YOU NEED.</h1>
-                <p class="hero-subtitle">Calculate the marks required to pass your exam<br>or reach your target percentage.</p>
-                
-                <div class="hero-meta">
-                    <span class="meta-item">MODULES 40%</span>
-                    <span class="meta-item">PAPER 60%</span>
+    <div class="page-wrapper">
+
+        <!-- Header -->
+        <header class="site-header">
+            <div class="header-inner">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <rect width="32" height="32" rx="8" fill="#2563eb"/>
+                        <text y="23" x="16" text-anchor="middle" font-size="18" font-family="Inter, sans-serif" font-weight="700" fill="white">%</text>
+                    </svg>
+                    <span class="logo-text">SemCalc</span>
                 </div>
-
-                <a href="#calculator" class="cta-button">START CALCULATING &rarr;</a>
+                <div class="header-right">
+                    <div class="header-credit">by <a href="https://www.centagon.in/" target="_blank" rel="noopener">Centagon</a></div>
+                    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+                        <!-- Moon icon (shown in light mode) -->
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <!-- Sun icon (shown in dark mode) -->
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
-            
-            <div class="hero-graphic" aria-hidden="true">
-                <!-- Geometric Bauhaus Composition -->
-                <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" class="bauhaus-svg">
-                    <!-- Grid Dots -->
-                    <circle cx="50" cy="50" r="8" fill="#171717" />
-                    <circle cx="90" cy="50" r="8" fill="#171717" />
-                    <circle cx="130" cy="50" r="8" fill="#171717" />
-                    <circle cx="170" cy="50" r="8" fill="#171717" />
-                    
-                    <circle cx="50" cy="90" r="8" fill="#171717" />
-                    <circle cx="90" cy="90" r="8" fill="#171717" />
-                    <circle cx="130" cy="90" r="8" fill="#171717" />
-                    <circle cx="170" cy="90" r="8" fill="#171717" />
+        </header>
 
-                    <!-- Red Square -->
-                    <rect x="230" y="40" width="130" height="130" fill="#E6332A" />
+        <!-- Main content -->
+        <main class="main-content">
 
-                    <!-- Quarter Circle Black -->
-                    <path d="M 40 360 A 160 160 0 0 1 200 200 L 40 200 Z" fill="#171717" />
-
-                    <!-- Thin Stripes -->
-                    <line x1="230" y1="210" x2="360" y2="340" stroke="#171717" stroke-width="3" />
-                    <line x1="250" y1="210" x2="380" y2="340" stroke="#171717" stroke-width="3" />
-                    <line x1="270" y1="210" x2="400" y2="340" stroke="#171717" stroke-width="3" />
-                    
-                    <!-- Solid Black Rectangle -->
-                    <rect x="180" y="340" width="180" height="40" fill="#171717" />
-                    
-                    <!-- Small Red Circle -->
-                    <circle cx="210" cy="270" r="20" fill="#E6332A" />
-                </svg>
+            <!-- Intro -->
+            <div class="intro-block">
+                <h1 class="page-title">Semester Marks Calculator</h1>
+                <p class="page-desc">
+                    Enter your module marks and target percentage to find out exactly how much you need to score in the final paper.
+                </p>
+                <div class="formula-badge">
+                    <span class="badge-part">Modules <strong>40%</strong></span>
+                    <span class="badge-sep">+</span>
+                    <span class="badge-part">Paper <strong>60%</strong></span>
+                    <span class="badge-sep">=</span>
+                    <span class="badge-part"><strong>Final %</strong></span>
+                </div>
             </div>
-        </section>
 
-        <section id="calculator" class="calculator-section grid-container">
-            <div class="calc-setup">
-                <h2 class="section-label">EXAM SETUP</h2>
+            <!-- Calculator card -->
+            <div class="calc-card">
 
-                <div class="input-group">
-                    <label for="num-modules">NUMBER OF MODULES</label>
-                    <div class="input-row">
-                        <input type="number" id="num-modules" value="05" min="1">
+                <!-- Step 1 -->
+                <div class="form-section">
+                    <div class="step-label">
+                        <span class="step-number">1</span>
+                        <span class="step-title">How many modules does your semester have?</span>
+                    </div>
+                    <div class="field-group">
+                        <label for="num-modules" class="field-label">Total number of modules</label>
+                        <div class="number-stepper">
+                            <button type="button" class="stepper-btn" id="modules-minus" aria-label="Decrease modules">−</button>
+                            <input type="number" id="num-modules" value="5" min="1" max="20" aria-label="Total number of modules">
+                            <button type="button" class="stepper-btn" id="modules-plus" aria-label="Increase modules">+</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="modules-container">
-                    <div class="modules-header">
-                        <label>COMPLETED MODULES</label>
-                        <span class="modules-status" id="modules-status">02 / 05 COMPLETED</span>
+                <!-- Divider -->
+                <div class="section-divider"></div>
+
+                <!-- Step 2 -->
+                <div class="form-section">
+                    <div class="step-label">
+                        <span class="step-number">2</span>
+                        <span class="step-title">Enter marks for modules you've already completed</span>
                     </div>
-                    
-                    <div id="dynamic-modules">
-                        <!-- Dynamic inputs populated by JS -->
+                    <p class="step-hint">
+                        Each module is marked out of 20 (Theory /10 + Practical /10).<br>
+                        Leave this empty if you haven't completed any modules yet.
+                    </p>
+
+                    <div class="modules-header-row">
+                        <span class="modules-count-label" id="modules-status">0 of 5 modules added</span>
+                        <button type="button" id="add-module-btn" class="add-btn">+ Add module</button>
                     </div>
-                    
-                    <button type="button" id="add-module-btn" class="text-button">+ ADD MODULE</button>
+
+                    <div id="dynamic-modules" class="modules-list">
+                        <!-- Populated by JS -->
+                    </div>
                 </div>
 
-                <div class="input-group mt-large">
-                    <label>TARGET</label>
-                    <div class="target-selector">
+                <!-- Divider -->
+                <div class="section-divider"></div>
+
+                <!-- Step 3 -->
+                <div class="form-section">
+                    <div class="step-label">
+                        <span class="step-number">3</span>
+                        <span class="step-title">What percentage are you aiming for?</span>
+                    </div>
+                    <p class="step-hint">Select a common target or type your own.</p>
+
+                    <div class="target-pills" role="group" aria-label="Target percentage presets">
                         <button type="button" class="target-btn active" data-val="40">40%</button>
                         <button type="button" class="target-btn" data-val="50">50%</button>
                         <button type="button" class="target-btn" data-val="60">60%</button>
                         <button type="button" class="target-btn" data-val="70">70%</button>
                         <button type="button" class="target-btn" data-val="80">80%</button>
                     </div>
-                    <div class="custom-target-row">
-                        <label for="custom-target">CUSTOM</label>
-                        <input type="number" id="custom-target" value="40" min="0.1" max="100" step="0.1">
-                        <span class="input-suffix">%</span>
+
+                    <div class="custom-target-field">
+                        <label for="custom-target" class="field-label">Custom target</label>
+                        <div class="custom-target-input-wrap">
+                            <input type="number" id="custom-target" value="40" min="0.1" max="100" step="0.1" aria-label="Custom target percentage">
+                            <span class="input-unit">%</span>
+                        </div>
                     </div>
                 </div>
 
-                <button type="button" id="calculate-btn" class="submit-button">CALCULATE &rarr;</button>
-                
+                <!-- Error banner -->
                 <div id="error-message" class="error-banner hidden" aria-live="polite">
-                    <span class="error-title">CALCULATION ERROR</span>
+                    <svg class="error-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M10 6v4M10 13.5h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
                     <span id="error-text">Check your inputs and try again.</span>
                 </div>
-            </div>
 
-            <div class="calc-result">
-                <h2 class="section-label">RESULT</h2>
-                
-                <div class="result-placeholder" id="result-placeholder">
-                    AWAITING INPUT
+                <!-- Calculate button -->
+                <button type="button" id="calculate-btn" class="calculate-btn">
+                    <span class="btn-text">Calculate</span>
+                    <svg class="btn-arrow" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+
+            </div><!-- .calc-card -->
+
+            <!-- Result panel -->
+            <div class="result-panel hidden" id="result-display" aria-live="polite">
+
+                <div class="result-header">
+                    <div class="result-status-badge" id="result-status-badge">
+                        <span id="result-status-icon"></span>
+                        <span id="result-status-text">Target Achievable</span>
+                    </div>
+                    <div class="result-target-label">Target: <strong id="res-target">40%</strong></div>
                 </div>
-                
-                <div class="result-display hidden" id="result-display" aria-live="polite">
-                    <div class="result-block">
-                        <span class="result-label">TARGET</span>
-                        <div class="result-value" id="res-target">40%</div>
+
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div class="result-item-label">Your module score</div>
+                        <div class="result-item-value" id="res-module-aggregate">—</div>
+                        <div class="result-item-sub">out of 40</div>
                     </div>
-                    
-                    <div class="result-block">
-                        <span class="result-label">REMAINING MODULES</span>
-                        <div class="result-value" id="res-remaining-mods">03</div>
-                    </div>
-
-                    <div class="result-block">
-                        <span class="result-label">SECURED FROM MODULES</span>
-                        <div class="result-value" id="res-module-aggregate">0.00 / 40</div>
-                    </div>
-
-                    <div class="result-block">
-                        <span class="result-label">REQUIRED TO REACH TARGET</span>
-                        <div class="result-value" id="res-marks-needed">0.00 / 60</div>
-                    </div>
-                    
-
-                    
-
-
-                    <div class="result-status" id="res-status-container">
-                        <span class="status-dot-large" id="res-status-dot">●</span> 
-                        <span id="res-status-text">TARGET ACHIEVABLE</span>
+                    <div class="result-item">
+                        <div class="result-item-label">Modules still remaining</div>
+                        <div class="result-item-value" id="res-remaining-mods">—</div>
+                        <div class="result-item-sub">not yet done</div>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <section id="how-it-works" class="info-section grid-container">
-            <div class="info-column">
-                <h2 class="section-label">HOW IT WORKS</h2>
-                
-                <div class="math-explanation">
-                    <div class="math-row">
-                        <span class="math-label">MODULE CONTRIBUTION</span>
-                        <span class="math-formula">Module performance &times; 40%</span>
-                    </div>
-                    <div class="math-operator">+</div>
-                    <div class="math-row">
-                        <span class="math-label">PAPER CONTRIBUTION</span>
-                        <span class="math-formula">Paper performance &times; 60%</span>
-                    </div>
-                    <div class="math-operator">=</div>
-                    <div class="math-row">
-                        <span class="math-label">FINAL RESULT</span>
-                        <span class="math-formula">0.40 &times; MODULE % + 0.60 &times; PAPER %</span>
-                    </div>
+                <div class="result-highlight">
+                    <div class="result-highlight-label">You need to score in the final paper</div>
+                    <div class="result-highlight-value" id="res-marks-needed">—</div>
+                    <div class="result-highlight-sub" id="res-marks-sub">out of 60</div>
+                </div>
+
+            </div><!-- .result-panel -->
+
+            <!-- Placeholder before result -->
+            <div class="result-placeholder" id="result-placeholder">
+                <div class="placeholder-inner">
+                    <svg class="placeholder-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M16 24h16M16 30h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="32" cy="18" r="4" fill="transparent" stroke="currentColor" stroke-width="2"/>
+                        <path d="M30.5 18h3M32 16.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p>Your results will appear here after you hit <strong>Calculate</strong>.</p>
                 </div>
             </div>
-            
-            <div class="info-column text-info-col">
-                <div class="info-item">
-                    <h3 class="info-number">01 &mdash; MODULES</h3>
-                    <p>Each module is evaluated out of 20 marks.</p>
-                </div>
-                <div class="info-item">
-                    <h3 class="info-number">02 &mdash; PAPER</h3>
-                    <p>The paper examination contributes 60% of the final result.</p>
-                </div>
-                <div class="info-item">
-                    <h3 class="info-number">03 &mdash; FINAL RESULT</h3>
-                    <p>Modules contribute 40%. Paper contributes 60%.</p>
-                </div>
-            </div>
-        </section>
-    </main>
 
-    <footer class="app-footer">
-        <div class="footer-left">
-            <div>EXAM MARK CALCULATOR</div>
-            <div class="footer-tagline">40 / 60 &mdash; MODULE / PAPER</div>
-        </div>
-        <div class="footer-center centagon-credits">
-            <div>AN INITIATIVE BY <strong>CENTAGON</strong></div>
-            <div class="footer-tagline">"EVERY SIDE MATTERS"</div>
-        </div>
-        <div class="footer-right social-links">
-            <a href="https://www.centagon.in/" target="_blank" rel="noopener">WEBSITE</a>
-            <a href="https://www.instagram.com/centagon.in/" target="_blank" rel="noopener">INSTAGRAM</a>
-            <a href="https://www.linkedin.com/company/centagon-tech" target="_blank" rel="noopener">LINKEDIN</a>
-        </div>
-    </footer>
+        </main>
+
+        <!-- Footer -->
+        <footer class="site-footer">
+            <p>An initiative by <a href="https://www.centagon.in/" target="_blank" rel="noopener">Centagon</a> &nbsp;·&nbsp;
+            <a href="https://www.instagram.com/centagon.in/" target="_blank" rel="noopener">Instagram</a> &nbsp;·&nbsp;
+            <a href="https://www.linkedin.com/company/centagon-tech" target="_blank" rel="noopener">LinkedIn</a></p>
+        </footer>
+
+    </div><!-- .page-wrapper -->
 
     <script src="script.js"></script>
 </body>

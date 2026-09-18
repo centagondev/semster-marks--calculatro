@@ -1,136 +1,110 @@
-// 1. DOM references
+// Semester Marks Calculator — Frontend Logic
+// Connects to: POST http://localhost:8000/calculate
+// No logic changed; only UI bindings updated to match new HTML structure.
+
 document.addEventListener('DOMContentLoaded', () => {
+
+    // ── DOM refs ──────────────────────────────────────────────────
     const refs = {
-        numModules: document.getElementById('num-modules'),
+        numModules:       document.getElementById('num-modules'),
+        modulesMinus:     document.getElementById('modules-minus'),
+        modulesPlus:      document.getElementById('modules-plus'),
         modulesContainer: document.getElementById('dynamic-modules'),
-        addModuleBtn: document.getElementById('add-module-btn'),
-        modulesStatus: document.getElementById('modules-status'),
-        targetBtns: document.querySelectorAll('.target-btn'),
-        customTarget: document.getElementById('custom-target'),
-        calculateBtn: document.getElementById('calculate-btn'),
-        errorBanner: document.getElementById('error-message'),
-        errorText: document.getElementById('error-text'),
-        resultDisplay: document.getElementById('result-display'),
-        resultPlaceholder: document.getElementById('result-placeholder'),
-        
+        addModuleBtn:     document.getElementById('add-module-btn'),
+        modulesStatus:    document.getElementById('modules-status'),
+
+        targetBtns:       document.querySelectorAll('.target-btn'),
+        customTarget:     document.getElementById('custom-target'),
+
+        calculateBtn:     document.getElementById('calculate-btn'),
+
+        errorBanner:      document.getElementById('error-message'),
+        errorText:        document.getElementById('error-text'),
+
+        resultDisplay:    document.getElementById('result-display'),
+        resultPlaceholder:document.getElementById('result-placeholder'),
+
         // Result fields
-        resTarget: document.getElementById('res-target'),
+        resTarget:        document.getElementById('res-target'),
         resRemainingMods: document.getElementById('res-remaining-mods'),
-        resModuleAggregate: document.getElementById('res-module-aggregate'),
-        resMarksNeeded: document.getElementById('res-marks-needed'),
-        resStatusContainer: document.getElementById('res-status-container'),
-        resStatusText: document.getElementById('res-status-text')
+        resModuleAggregate:document.getElementById('res-module-aggregate'),
+        resMarksNeeded:   document.getElementById('res-marks-needed'),
+        resMarksSub:      document.getElementById('res-marks-sub'),
+        resStatusBadge:   document.getElementById('result-status-badge'),
+        resStatusText:    document.getElementById('result-status-text'),
+        resStatusIcon:    document.getElementById('result-status-icon'),
+        
+        themeToggle:      document.getElementById('theme-toggle'),
     };
 
-    // 2. State
+    // ── State ─────────────────────────────────────────────────────
     let state = {
+        // Each entry: { theory: number, practical: number }
         completedMarks: [
             { theory: 7, practical: 7 },
             { theory: 8, practical: 8 }
         ],
     };
 
-    // 3. Module management
-    function formatNumber(num) {
-        return num.toString().padStart(2, '0');
+    // ── Helpers ───────────────────────────────────────────────────
+    function getTotalModules() {
+        return parseInt(refs.numModules.value) || 1;
     }
 
+    function clamp(val, min, max) {
+        return Math.min(Math.max(val, min), max);
+    }
+
+    // ── Module rendering ──────────────────────────────────────────
     function renderModules() {
-        const totalModules = parseInt(refs.numModules.value) || 1;
-        
-        // Cap completed modules at total modules
-        if (state.completedMarks.length > totalModules) {
-            state.completedMarks = state.completedMarks.slice(0, totalModules);
+        const total = getTotalModules();
+
+        // Cap completed modules at total
+        if (state.completedMarks.length > total) {
+            state.completedMarks = state.completedMarks.slice(0, total);
         }
 
         // Update status label
-        refs.modulesStatus.textContent = `${formatNumber(state.completedMarks.length)} / ${formatNumber(totalModules)} COMPLETED`;
-        
-        // Disable/hide add button if max reached
-        if (state.completedMarks.length >= totalModules) {
-            refs.addModuleBtn.style.display = 'none';
-        } else {
-            refs.addModuleBtn.style.display = 'block';
-        }
+        const completed = state.completedMarks.length;
+        refs.modulesStatus.textContent =
+            `${completed} of ${total} module${total !== 1 ? 's' : ''} added`;
 
-        // Render DOM inputs
+        // Show/hide add button
+        const canAdd = completed < total;
+        refs.addModuleBtn.disabled = !canAdd;
+        refs.addModuleBtn.style.display = canAdd ? '' : 'none';
+
+        // Rebuild module rows
         refs.modulesContainer.innerHTML = '';
+
         state.completedMarks.forEach((markObj, idx) => {
             const row = document.createElement('div');
             row.className = 'module-row';
-            
-            const label = document.createElement('div');
-            label.className = 'module-label';
-            label.textContent = formatNumber(idx + 1);
-            
-            const inputsContainer = document.createElement('div');
-            inputsContainer.className = 'module-inputs-container';
-            
-            // Theory Input
-            const theoryWrapper = document.createElement('div');
-            theoryWrapper.className = 'module-input-wrapper';
-            
-            const theoryLabel = document.createElement('span');
-            theoryLabel.className = 'input-label-small';
-            theoryLabel.textContent = 'THEORY';
-            
-            const theoryInput = document.createElement('input');
-            theoryInput.type = 'number';
-            theoryInput.min = '0';
-            theoryInput.max = '10';
-            theoryInput.step = '0.1';
-            theoryInput.value = markObj.theory;
-            theoryInput.setAttribute('aria-label', `Theory mark for Module ${idx + 1}`);
-            theoryInput.addEventListener('change', (e) => {
-                let val = parseFloat(e.target.value);
-                if (isNaN(val)) val = 0;
-                if (val < 0) val = 0;
-                if (val > 10) val = 10;
-                e.target.value = val;
-                state.completedMarks[idx].theory = val;
-            });
-            const theorySuffix = document.createElement('span');
-            theorySuffix.className = 'input-suffix';
-            theorySuffix.textContent = '/ 10';
-            
-            theoryWrapper.appendChild(theoryLabel);
-            theoryWrapper.appendChild(theoryInput);
-            theoryWrapper.appendChild(theorySuffix);
-            
-            // Practical Input
-            const pracWrapper = document.createElement('div');
-            pracWrapper.className = 'module-input-wrapper';
-            
-            const pracLabel = document.createElement('span');
-            pracLabel.className = 'input-label-small';
-            pracLabel.textContent = 'PRACTICAL';
-            
-            const pracInput = document.createElement('input');
-            pracInput.type = 'number';
-            pracInput.min = '0';
-            pracInput.max = '10';
-            pracInput.step = '0.1';
-            pracInput.value = markObj.practical;
-            pracInput.setAttribute('aria-label', `Practical mark for Module ${idx + 1}`);
-            pracInput.addEventListener('change', (e) => {
-                let val = parseFloat(e.target.value);
-                if (isNaN(val)) val = 0;
-                if (val < 0) val = 0;
-                if (val > 10) val = 10;
-                e.target.value = val;
-                state.completedMarks[idx].practical = val;
-            });
-            const pracSuffix = document.createElement('span');
-            pracSuffix.className = 'input-suffix';
-            pracSuffix.textContent = '/ 10';
-            
-            pracWrapper.appendChild(pracLabel);
-            pracWrapper.appendChild(pracInput);
-            pracWrapper.appendChild(pracSuffix);
-            
-            inputsContainer.appendChild(theoryWrapper);
-            inputsContainer.appendChild(pracWrapper);
-            
+
+            // Module number badge
+            const numBadge = document.createElement('div');
+            numBadge.className = 'module-num';
+            numBadge.textContent = idx + 1;
+
+            // Theory field
+            const theoryField = makeModuleField(
+                'Theory',
+                markObj.theory,
+                10,
+                `Theory mark for Module ${idx + 1}`,
+                (val) => { state.completedMarks[idx].theory = val; }
+            );
+
+            // Practical field
+            const pracField = makeModuleField(
+                'Practical',
+                markObj.practical,
+                10,
+                `Practical mark for Module ${idx + 1}`,
+                (val) => { state.completedMarks[idx].practical = val; }
+            );
+
+            // Remove button
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'remove-module-btn';
@@ -140,33 +114,88 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.completedMarks.splice(idx, 1);
                 renderModules();
             });
-            
-            row.appendChild(label);
-            row.appendChild(inputsContainer);
+
+            row.appendChild(numBadge);
+            row.appendChild(theoryField);
+            row.appendChild(pracField);
             row.appendChild(removeBtn);
-            
+
             refs.modulesContainer.appendChild(row);
         });
     }
 
-    // 4. Validation & Listeners
-    refs.numModules.addEventListener('change', (e) => {
-        let val = parseInt(e.target.value);
-        if (isNaN(val) || val < 1) {
-            val = 1;
+    function makeModuleField(label, value, max, ariaLabel, onChange) {
+        const field = document.createElement('div');
+        field.className = 'module-field';
+
+        const labelEl = document.createElement('span');
+        labelEl.className = 'module-field-label';
+        labelEl.textContent = label;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'module-input-wrap';
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '0';
+        input.max = String(max);
+        input.step = '0.1';
+        input.value = value;
+        input.setAttribute('aria-label', ariaLabel);
+
+        input.addEventListener('change', (e) => {
+            let val = parseFloat(e.target.value);
+            if (isNaN(val)) val = 0;
+            val = clamp(val, 0, max);
+            e.target.value = val;
+            onChange(val);
+        });
+
+        const unit = document.createElement('span');
+        unit.className = 'module-input-unit';
+        unit.textContent = `/ ${max}`;
+
+        wrap.appendChild(input);
+        wrap.appendChild(unit);
+
+        field.appendChild(labelEl);
+        field.appendChild(wrap);
+
+        return field;
+    }
+
+    // ── Total modules stepper ─────────────────────────────────────
+    refs.modulesMinus.addEventListener('click', () => {
+        const current = getTotalModules();
+        if (current > 1) {
+            refs.numModules.value = current - 1;
+            renderModules();
         }
-        e.target.value = formatNumber(val);
+    });
+
+    refs.modulesPlus.addEventListener('click', () => {
+        const current = getTotalModules();
+        refs.numModules.value = current + 1;
         renderModules();
     });
 
+    refs.numModules.addEventListener('change', (e) => {
+        let val = parseInt(e.target.value);
+        if (isNaN(val) || val < 1) val = 1;
+        e.target.value = val;
+        renderModules();
+    });
+
+    // ── Add module button ─────────────────────────────────────────
     refs.addModuleBtn.addEventListener('click', () => {
-        const total = parseInt(refs.numModules.value) || 1;
+        const total = getTotalModules();
         if (state.completedMarks.length < total) {
             state.completedMarks.push({ theory: 0, practical: 0 });
             renderModules();
         }
     });
 
+    // ── Target percentage pills ───────────────────────────────────
     refs.targetBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             refs.targetBtns.forEach(b => b.classList.remove('active'));
@@ -186,109 +215,139 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 5. API request
+    // ── Calculate ─────────────────────────────────────────────────
     refs.calculateBtn.addEventListener('click', async () => {
-        const totalModules = parseInt(refs.numModules.value);
+        const totalModules = getTotalModules();
         const targetPct = parseFloat(refs.customTarget.value);
 
-        // Validation defensive checks
         if (isNaN(totalModules) || totalModules < 1) {
-            showError("Number of modules must be at least 1.");
+            showError('Number of modules must be at least 1.');
             return;
         }
         if (isNaN(targetPct) || targetPct <= 0 || targetPct > 100) {
-            showError("Target percentage must be between 0 and 100.");
+            showError('Target percentage must be between 0 and 100.');
             return;
         }
 
         hideError();
-        refs.calculateBtn.disabled = true;
-        refs.calculateBtn.textContent = 'CALCULATING...';
+        setCalculating(true);
 
+        // Combine theory + practical into a single mark per module
         const combinedMarks = state.completedMarks.map(m => m.theory + m.practical);
 
         const payload = {
             number_of_modules: totalModules,
             completed_module_marks: combinedMarks,
-            target_percentage: targetPct
+            target_percentage: targetPct,
         };
 
         try {
             const response = await fetch('http://localhost:8000/calculate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
                 let errorMsg = `Server error: ${response.status}`;
                 if (errData.detail) {
-                    // Handle FastAPI validation errors (arrays) or custom HTTPException (strings)
-                    if (Array.isArray(errData.detail)) {
-                        errorMsg = errData.detail.map(e => e.msg).join(", ");
-                    } else {
-                        errorMsg = errData.detail;
-                    }
+                    errorMsg = Array.isArray(errData.detail)
+                        ? errData.detail.map(e => e.msg).join(', ')
+                        : errData.detail;
                 }
                 throw new Error(errorMsg);
             }
 
             const data = await response.json();
             renderResult(data);
+
         } catch (err) {
-            showError(err.message || "API unavailable or network error. Please ensure backend is running.");
+            showError(err.message || 'Could not reach the backend. Make sure the server is running.');
             console.error(err);
         } finally {
-            refs.calculateBtn.disabled = false;
-            refs.calculateBtn.textContent = 'CALCULATE →';
+            setCalculating(false);
         }
     });
 
-    // 6. Result rendering
+    // ── Render result ─────────────────────────────────────────────
     function renderResult(data) {
+        const isAchievable = data.status === 'PASS POSSIBLE';
+
+        // Show result panel, hide placeholder
         refs.resultPlaceholder.classList.add('hidden');
         refs.resultDisplay.classList.remove('hidden');
 
-        const isAchievable = data.status === "PASS POSSIBLE";
-        
+        // Status badge
+        refs.resStatusBadge.className = 'result-status-badge ' +
+            (isAchievable ? 'achievable' : 'not-achievable');
+        refs.resStatusIcon.textContent = isAchievable ? '✓' : '✗';
+        refs.resStatusText.textContent  = isAchievable ? 'Target Achievable' : 'Target Not Achievable';
+
+        // Target
         refs.resTarget.textContent = `${data.target_percentage}%`;
-        
-        if (data.remaining_modules !== undefined) {
-             refs.resRemainingMods.textContent = formatNumber(data.remaining_modules);
-        }
-        
+
+        // Module aggregate
         if (data.module_aggregate !== undefined) {
-            refs.resModuleAggregate.textContent = `${data.module_aggregate.toFixed(2)} / ${data.module_aggregate_max}`;
+            refs.resModuleAggregate.textContent = data.module_aggregate.toFixed(2);
         }
-        
+
+        // Remaining modules
+        if (data.remaining_modules !== undefined) {
+            refs.resRemainingMods.textContent = data.remaining_modules;
+        }
+
+        // Marks needed from paper
         if (data.marks_needed !== undefined) {
-            refs.resMarksNeeded.textContent = `${data.marks_needed.toFixed(2)} / 60`;
+            refs.resMarksNeeded.textContent = data.marks_needed.toFixed(2);
         }
 
-
-        
-
-        
-        refs.resStatusText.textContent = isAchievable ? "TARGET ACHIEVABLE" : "TARGET NOT ACHIEVABLE";
-        
-        refs.resStatusContainer.className = 'result-status';
-        refs.resStatusContainer.classList.add(isAchievable ? 'status-success' : 'status-fail');
-
-        if (window.innerWidth <= 768) {
+        // Scroll result into view on mobile
+        if (window.innerWidth <= 640) {
             refs.resultDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
 
-    // 7. Error handling
+    // ── Error helpers ─────────────────────────────────────────────
     function showError(msg) {
         refs.errorText.textContent = msg;
         refs.errorBanner.classList.remove('hidden');
     }
+
     function hideError() {
         refs.errorBanner.classList.add('hidden');
     }
 
-    // Initialize
+    // ── Button loading state ──────────────────────────────────────
+    function setCalculating(loading) {
+        refs.calculateBtn.disabled = loading;
+        const textEl = refs.calculateBtn.querySelector('.btn-text');
+        if (textEl) {
+            textEl.textContent = loading ? 'Calculating…' : 'Calculate';
+        }
+    }
+
+    // ── Theme toggle ──────────────────────────────────────────────
+    if (refs.themeToggle) {
+        refs.themeToggle.addEventListener('click', () => {
+            document.body.classList.add('theme-transitioning');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('semcalc-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('semcalc-theme', 'dark');
+            }
+            
+            // Remove transition class after animation completes
+            setTimeout(() => {
+                document.body.classList.remove('theme-transitioning');
+            }, 200);
+        });
+    }
+
+    // ── Init ──────────────────────────────────────────────────────
     renderModules();
+
 });

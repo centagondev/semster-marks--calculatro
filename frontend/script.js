@@ -1,14 +1,6 @@
 // Semester Marks Calculator — Frontend Logic
-// Connects to: POST http://localhost:8000/calculate
-// No logic changed; only UI bindings updated to match new HTML structure.
 
 document.addEventListener('DOMContentLoaded', () => {
-
-// ── Configuration ───────────────────────────────────────────────
-    // Automatically use localhost in dev, or the Vercel relative /api in prod
-    const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? 'http://localhost:8000'
-        : '/api';
 
     // ── DOM refs ──────────────────────────────────────────────────
     const refs = {
@@ -222,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Calculate ─────────────────────────────────────────────────
-    refs.calculateBtn.addEventListener('click', async () => {
+    refs.calculateBtn.addEventListener('click', () => {
         const totalModules = getTotalModules();
         const targetPct = parseFloat(refs.customTarget.value);
 
@@ -241,40 +233,109 @@ document.addEventListener('DOMContentLoaded', () => {
         // Combine theory + practical into a single mark per module
         const combinedMarks = state.completedMarks.map(m => m.theory + m.practical);
 
-        const payload = {
-            number_of_modules: totalModules,
-            completed_module_marks: combinedMarks,
-            target_percentage: targetPct,
-        };
-
         try {
-            const response = await fetch(`${API_BASE_URL}/calculate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                let errorMsg = `Server error: ${response.status}`;
-                if (errData.detail) {
-                    errorMsg = Array.isArray(errData.detail)
-                        ? errData.detail.map(e => e.msg).join(', ')
-                        : errData.detail;
-                }
-                throw new Error(errorMsg);
-            }
-
-            const data = await response.json();
+            const data = calculateExam(totalModules, combinedMarks, targetPct);
             renderResult(data);
 
         } catch (err) {
-            showError(err.message || 'Could not reach the backend. Make sure the server is running.');
+            showError(err.message || 'Could not calculate the result.');
             console.error(err);
         } finally {
             setCalculating(false);
         }
     });
+
+    function calculateExam(numberOfModules, completedModuleMarks, targetPercentage = 40) {
+        const completedCount = completedModuleMarks.length;
+        const remainingModules = numberOfModules - completedCount;
+        const completedMarks = completedModuleMarks.reduce((total, mark) => total + mark, 0);
+
+        // 1. Module Aggregate
+        const moduleAggregate = (completedMarks / (numberOfModules * 20)) * 40;
+
+        // 2. Marks Needed To Pass (remaining contribution required)
+        const marksNeeded = targetPercentage - moduleAggregate;
+
+        // CASE 1: All modules are completed
+        if (remainingModules === 0) {
+            let requiredPaperMark = (marksNeeded / 60) * 100;
+
+            if (requiredPaperMark > 100) {
+                return {
+                    status: 'INVALID INPUT',
+                    message: 'Required paper mark exceeds the maximum available mark of 100.',
+                    target_percentage: targetPercentage,
+                    completed_modules: completedCount,
+                    remaining_modules: 0,
+                    completed_marks: completedMarks,
+                    module_aggregate: moduleAggregate,
+                    module_aggregate_max: 40,
+                    marks_needed: marksNeeded,
+                    required_percentage: requiredPaperMark,
+                    required_paper_marks: requiredPaperMark,
+                };
+            }
+
+            if (requiredPaperMark < 0) requiredPaperMark = 0;
+
+            return {
+                status: 'PASS POSSIBLE',
+                target_percentage: targetPercentage,
+                completed_modules: completedCount,
+                remaining_modules: 0,
+                completed_marks: completedMarks,
+                module_aggregate: moduleAggregate,
+                module_aggregate_max: 40,
+                marks_needed: marksNeeded,
+                required_percentage: requiredPaperMark,
+                required_module_marks: [],
+                required_paper_marks: requiredPaperMark,
+            };
+        }
+
+        // CASE 2: Modules + final paper are remaining
+        const denominator = (0.4 * remainingModules / numberOfModules) + 0.6;
+        let p = marksNeeded / denominator;
+        let requiredModuleMark = (p / 100) * 20;
+        let requiredPaperMark = p;
+
+        if (requiredModuleMark > 20) {
+            return {
+                status: 'INVALID INPUT',
+                message: 'Required mark exceeds the maximum available module mark of 20.',
+                target_percentage: targetPercentage,
+                completed_modules: completedCount,
+                remaining_modules: remainingModules,
+                completed_marks: completedMarks,
+                module_aggregate: moduleAggregate,
+                module_aggregate_max: 40,
+                marks_needed: marksNeeded,
+                required_percentage: p,
+                required_module_marks: Array(remainingModules).fill(requiredModuleMark),
+                required_paper_marks: requiredPaperMark,
+            };
+        }
+
+        if (requiredModuleMark < 0) {
+            requiredModuleMark = 0;
+            requiredPaperMark = 0;
+            p = 0;
+        }
+
+        return {
+            status: 'PASS POSSIBLE',
+            target_percentage: targetPercentage,
+            completed_modules: completedCount,
+            remaining_modules: remainingModules,
+            completed_marks: completedMarks,
+            module_aggregate: moduleAggregate,
+            module_aggregate_max: 40,
+            marks_needed: marksNeeded,
+            required_percentage: p,
+            required_module_marks: Array(remainingModules).fill(requiredModuleMark),
+            required_paper_marks: requiredPaperMark,
+        };
+    }
 
     // ── Render result ─────────────────────────────────────────────
     function renderResult(data) {

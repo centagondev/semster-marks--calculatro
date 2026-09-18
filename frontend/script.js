@@ -4,6 +4,12 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+// ── Configuration ───────────────────────────────────────────────
+    // Automatically use localhost in dev, or the Vercel relative /api in prod
+    const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:8000'
+        : '/api';
+
     // ── DOM refs ──────────────────────────────────────────────────
     const refs = {
         numModules:       document.getElementById('num-modules'),
@@ -242,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            const response = await fetch('http://localhost:8000/calculate', {
+            const response = await fetch(`${API_BASE_URL}/calculate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),

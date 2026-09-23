@@ -30,6 +30,96 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
     };
 
+    function calculateExam({ number_of_modules, completed_module_marks, target_percentage = 40 }) {
+        const completed_count = completed_module_marks.length;
+        const remaining_modules = number_of_modules - completed_count;
+        const completed_marks = completed_module_marks.reduce((sum, mark) => sum + mark, 0);
+
+        const module_aggregate = (completed_marks / (number_of_modules * 20)) * 40;
+        const marks_needed = target_percentage - module_aggregate;
+
+        if (remaining_modules === 0) {
+            let required_paper_mark = (marks_needed / 60) * 100;
+
+            if (required_paper_mark > 100) {
+                return {
+                    status: "INVALID INPUT",
+                    message: "Required paper mark exceeds the maximum available mark of 100.",
+                    target_percentage: target_percentage,
+                    completed_modules: completed_count,
+                    remaining_modules: 0,
+                    completed_marks: completed_marks,
+                    module_aggregate: module_aggregate,
+                    module_aggregate_max: 40,
+                    marks_needed: marks_needed,
+                    required_percentage: required_paper_mark,
+                    required_paper_marks: required_paper_mark,
+                };
+            }
+
+            if (required_paper_mark < 0) {
+                required_paper_mark = 0;
+            }
+
+            return {
+                status: "PASS POSSIBLE",
+                target_percentage: target_percentage,
+                completed_modules: completed_count,
+                remaining_modules: 0,
+                completed_marks: completed_marks,
+                module_aggregate: module_aggregate,
+                module_aggregate_max: 40,
+                marks_needed: marks_needed,
+                required_percentage: required_paper_mark,
+                required_module_marks: [],
+                required_paper_marks: required_paper_mark,
+            };
+        }
+
+        const denominator = (0.4 * remaining_modules / number_of_modules) + 0.6;
+        let p = marks_needed / denominator;
+
+        let required_module_mark = (p / 100) * 20;
+        let required_paper_mark = p;
+
+        if (required_module_mark > 20) {
+            return {
+                status: "INVALID INPUT",
+                message: "Required mark exceeds the maximum available module mark of 20.",
+                target_percentage: target_percentage,
+                completed_modules: completed_count,
+                remaining_modules: remaining_modules,
+                completed_marks: completed_marks,
+                module_aggregate: module_aggregate,
+                module_aggregate_max: 40,
+                marks_needed: marks_needed,
+                required_percentage: p,
+                required_module_marks: [required_module_mark] * remaining_modules,
+                required_paper_marks: required_paper_mark,
+            };
+        }
+
+        if (required_module_mark < 0) {
+            required_module_mark = 0;
+            required_paper_mark = 0;
+            p = 0;
+        }
+
+        return {
+            status: "PASS POSSIBLE",
+            target_percentage: target_percentage,
+            completed_modules: completed_count,
+            remaining_modules: remaining_modules,
+            completed_marks: completed_marks,
+            module_aggregate: module_aggregate,
+            module_aggregate_max: 40,
+            marks_needed: marks_needed,
+            required_percentage: p,
+            required_module_marks: [required_module_mark] * remaining_modules,
+            required_paper_marks: required_paper_mark,
+        };
+    }
+
     // 3. Module management
     function formatNumber(num) {
         return num.toString().padStart(2, '0');
@@ -214,30 +304,14 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            const response = await fetch('http://localhost:8000/calculate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+            const data = calculateExam({
+                number_of_modules: totalModules,
+                completed_module_marks: combinedMarks,
+                target_percentage: targetPct
             });
-
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                let errorMsg = `Server error: ${response.status}`;
-                if (errData.detail) {
-                    // Handle FastAPI validation errors (arrays) or custom HTTPException (strings)
-                    if (Array.isArray(errData.detail)) {
-                        errorMsg = errData.detail.map(e => e.msg).join(", ");
-                    } else {
-                        errorMsg = errData.detail;
-                    }
-                }
-                throw new Error(errorMsg);
-            }
-
-            const data = await response.json();
             renderResult(data);
         } catch (err) {
-            showError(err.message || "API unavailable or network error. Please ensure backend is running.");
+            showError("Calculation failed. Please review your inputs.");
             console.error(err);
         } finally {
             refs.calculateBtn.disabled = false;

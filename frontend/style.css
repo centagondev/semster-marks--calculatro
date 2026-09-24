@@ -129,9 +129,18 @@ h1, h2, h3, h4, .hero-title {
     background-color: var(--color-red);
 }
 
+.nav-right {
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--color-black);
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
 .status-dot {
     color: var(--color-red);
-    margin-left: 4px;
+    margin-left: 6px;
     font-size: 1.1em;
 }
 
@@ -484,6 +493,53 @@ input[type=number] {
     letter-spacing: 0.05em;
 }
 
+.convert-section {
+    margin-top: var(--space-xs);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.convert-btn {
+    display: inline-block;
+    background: transparent;
+    border: 1px solid var(--color-black);
+    color: var(--color-black);
+    font-family: var(--font-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 6px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.convert-btn:hover {
+    background-color: var(--color-black);
+    color: var(--color-white);
+}
+
+.convert-btn.active {
+    background-color: var(--color-black);
+    color: var(--color-white);
+}
+
+.convert-btn:focus-visible {
+    outline: 2px solid var(--color-red);
+    outline-offset: 2px;
+}
+
+.converted-value {
+    font-size: clamp(2rem, 3.5vw, 2.75rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--color-black);
+    margin-top: 4px;
+}
+
 .result-status {
     display: flex;
     align-items: center;
@@ -662,8 +718,16 @@ input[type=number] {
     .grid-container {
         grid-template-columns: repeat(4, 1fr);
     }
-    .hero-content, .hero-graphic, .calc-setup, .calc-result {
+    .hero-section {
+        min-height: auto;
+        padding-top: var(--space-lg);
+        padding-bottom: var(--space-lg);
+    }
+    .hero-content, .calc-setup, .calc-result {
         grid-column: 1 / -1;
+    }
+    .hero-graphic {
+        display: none !important;
     }
     .calc-result {
         border-left: none;
@@ -674,10 +738,6 @@ input[type=number] {
     }
     .hero-title {
         font-size: 3.5rem;
-    }
-    .hero-graphic {
-        justify-content: center;
-        margin-top: var(--space-md);
     }
     .app-footer {
         flex-direction: column;
@@ -704,9 +764,15 @@ input[type=number] {
     }
 }
 
+@media (max-width: 640px) {
+    .nav-right {
+        display: none; /* Hide tagline on smaller screens so logo and nav links stay prominent */
+    }
+}
+
 @media (max-width: 480px) {
     .nav-center {
-        display: none; /* Hide middle links on very small screens */
+        gap: var(--space-sm);
     }
     .hero-title {
         font-size: 2.8rem;

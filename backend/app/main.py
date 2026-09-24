@@ -5,6 +5,9 @@ from .schema import ExamRequest
 from .calculator import calculate_exam
 
 
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
 app = FastAPI(
     title="Exam Mark Calculator",
     description="Calculate minimum marks required to achieve a target percentage",
@@ -18,6 +21,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
+if frontend_dir.exists():
+    app.mount("/demo", StaticFiles(directory=str(frontend_dir), html=True), name="demo")
+
 
 
 @app.get("/")

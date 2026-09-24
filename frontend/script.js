@@ -244,48 +244,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         hideError();
-        refs.calculateBtn.disabled = true;
-        refs.calculateBtn.textContent = 'CALCULATING...';
 
         const combinedMarks = state.completedMarks.map(m => m.theory + m.practical);
 
-        const payload = {
-            number_of_modules: totalModules,
-            completed_module_marks: combinedMarks,
-            target_percentage: targetPct
-        };
-
         try {
-            let data;
-            try {
-                const apiUrl = window.location.port === '8000' ? '/calculate' : 'http://localhost:8000/calculate';
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (response.ok) {
-                    data = await response.json();
-                }
-            } catch (netErr) {
-                // Fall back to client-side calculateExam if API server is not reached
-            }
-
-            if (!data) {
-                data = calculateExam({
-                    number_of_modules: totalModules,
-                    completed_module_marks: combinedMarks,
-                    target_percentage: targetPct
-                });
-            }
+            const data = calculateExam({
+                number_of_modules: totalModules,
+                completed_module_marks: combinedMarks,
+                target_percentage: targetPct
+            });
 
             renderResult(data);
         } catch (err) {
             showError("Calculation failed. Please review your inputs.");
             console.error(err);
-        } finally {
-            refs.calculateBtn.disabled = false;
-            refs.calculateBtn.textContent = 'CALCULATE →';
         }
     });
 

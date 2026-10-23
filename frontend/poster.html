@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centagon Exam Mark Calculator - Official Guide & Poster</title>
+    <meta name="description" content="Quick visual guide on how to calculate your semester exam marks, internal modules, and required final paper scores with Centagon Exam Mark Calculator.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-paper: #FBFBFA;
+            --color-black: #171717;
+            --color-red: #E6332A;
+            --color-red-light: #FFEDE9;
+            --color-gray-light: #EFEFEA;
+            --color-gray-muted: #737373;
+            --border-width: 2px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #E5E5E0;
+            color: var(--color-black);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 15px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Action Bar (hidden in print) */
+        .action-bar {
+            width: 100%;
+            max-width: 820px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 12px;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--color-black);
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 0.05em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.15s ease;
+        }
+
+        .back-link:hover {
+            color: var(--color-red);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            padding: 10px 18px;
+            border: var(--border-width) solid var(--color-black);
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--color-red);
+            color: #fff;
+            border-color: var(--color-red);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--color-black);
+            border-color: var(--color-black);
+        }
+
+        .btn-secondary {
+            background-color: #fff;
+            color: var(--color-black);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--color-black);
+            color: #fff;
+        }
+
+        /* Poster Sheet (Bauhaus Standard Ratio) */
+        .poster-sheet {
+            width: 100%;
+            max-width: 820px;
+            background-color: var(--bg-paper);
+            border: 3px solid var(--color-black);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
+            padding: 45px 50px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Poster Header */
+        .poster-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid var(--color-black);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .brand-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .brand-name {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 0.18em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-badge {
+            background-color: var(--color-red);
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 7px;
+            letter-spacing: 0.08em;
+            font-weight: 800;
+        }
+
+        .brand-tagline {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: var(--color-gray-muted);
+        }
+
+        .header-meta {
+            text-align: right;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            line-height: 1.5;
+        }
+
+        .header-meta .accent-dot {
+            color: var(--color-red);
+            font-size: 14px;
+        }
+
+        /* Hero / Title Section */
+        .poster-hero {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 30px;
+            align-items: center;
+            margin-bottom: 35px;
+        }
+
+        .hero-headline {
+            font-size: 48px;
+            font-weight: 900;
+            line-height: 0.95;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero-headline span.red-text {
+            color: var(--color-red);
+        }
+
+        .hero-desc {
+            font-size: 15px;
+            line-height: 1.45;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 18px;
+        }
+
+        .weightage-pill-box {
+            display: inline-flex;
+            border: 2px solid var(--color-black);
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .weightage-pill {
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+
+        .weightage-pill.red {
+            background-color: var(--color-red);
+            color: #fff;
+        }
+
+        .weightage-pill.black {
+            background-color: var(--color-black);
+            color: #fff;
+        }
+
+        /* Geometric Bauhaus Art Block */
+        .hero-graphic-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .bauhaus-card {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-width: 260px;
+            border: 2px solid var(--color-black);
+            background: #fff;
+            position: relative;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Steps Section Grid */
+        .steps-container {
+            margin-bottom: 35px;
+        }
+
+        .section-tag {
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--color-black);
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .step-card {
+            border: 2px solid var(--color-black);
+            background: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .step-num {
+            width: 32px;
+            height: 32px;
+            background-color: var(--color-black);
+            color: #fff;
+            font-weight: 900;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .step-card.highlight .step-num {
+            background-color: var(--color-red);
+        }
+
+        .step-title {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .step-body {
+            font-size: 13px;
+            line-height: 1.45;
+            color: #444;
+        }
+
+        .step-body strong {
+            color: var(--color-black);
+        }
+
+        .step-pill {
+            margin-top: 10px;
+            align-self: flex-start;
+            font-size: 11px;
+            font-weight: 700;
+            background-color: var(--color-gray-light);
+            padding: 4px 8px;
+            border-radius: 2px;
+            color: var(--color-black);
+        }
+
+        /* Quick Formula Box */
+        .formula-box {
+            border: 2px solid var(--color-black);
+            background-color: var(--color-red-light);
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+            gap: 20px;
+        }
+
+        .formula-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .formula-title {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            color: var(--color-red);
+            text-transform: uppercase;
+        }
+
+        .formula-equation {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .formula-badge {
+            background: #fff;
+            border: 1px solid var(--color-red);
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--color-red);
+            white-space: nowrap;
+        }
+
+        /* QR / Access Strip */
+        .access-strip {
+            border-top: 2px solid var(--color-black);
+            padding-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .url-box {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .url-label {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            color: var(--color-gray-muted);
+        }
+
+        .url-link {
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--color-black);
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .url-link:hover {
+            color: var(--color-red);
+        }
+
+        .qr-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #fff;
+            border: 2px solid var(--color-black);
+            padding: 8px 14px;
+        }
+
+        .qr-code-img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+        }
+
+        .qr-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .qr-scan-title {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .qr-scan-sub {
+            font-size: 10px;
+            color: var(--color-gray-muted);
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .poster-footer {
+            margin-top: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--color-gray-muted);
+            letter-spacing: 0.08em;
+            border-top: 1px solid #ddd;
+            padding-top: 14px;
+        }
+
+        .social-tags a {
+            color: inherit;
+            text-decoration: none;
+            margin-left: 12px;
+        }
+
+        .social-tags a:hover {
+            color: var(--color-black);
+        }
+
+        /* PRINT STYLES */
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+            .action-bar {
+                display: none !important;
+            }
+            .poster-sheet {
+                box-shadow: none;
+                border: 2px solid #000;
+                padding: 30px;
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+
+        /* Responsive Mobile Layout */
+        @media (max-width: 700px) {
+            .poster-sheet {
+                padding: 25px 20px;
+            }
+            .poster-hero {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .hero-headline {
+                font-size: 34px;
+            }
+            .hero-graphic-wrap {
+                display: none;
+            }
+            .steps-grid {
+                grid-template-columns: 1fr;
+            }
+            .formula-box {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .access-strip {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .url-link {
+                font-size: 15px;
+                word-break: break-all;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Action Bar -->
+    <header class="action-bar">
+        <a href="index.html" class="back-link">&larr; BACK TO CALCULATOR</a>
+        <div class="action-btns">
+            <a href="assets/exam_calculator_poster.jpg" download="Centagon_Exam_Calculator_Poster.jpg" class="btn btn-secondary">
+                🖼️ POSTER (JPG)
+            </a>
+            <a href="assets/story_calculator_poster.jpg" download="Centagon_Exam_Calculator_Story.jpg" class="btn btn-secondary">
+                📱 STORY (JPG)
+            </a>
+            <button type="button" onclick="window.print()" class="btn btn-primary">
+                🖨️ PRINT / PDF
+            </button>
+            <a href="index.html#calculator" class="btn btn-secondary">
+                CALCULATOR &rarr;
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Printable Poster Sheet -->
+    <main class="poster-sheet">
+        
+        <!-- Header -->
+        <header class="poster-header">
+            <div class="brand-block">
+                <div class="brand-name">
+                    CENTAGON
+                    <span class="brand-badge">STUDENT TOOL</span>
+                </div>
+                <div class="brand-tagline">EVERY SIDE MATTERS &bull; TECH INITIATIVE</div>
+            </div>
+            <div class="header-meta">
+                <div>EXAM MARK CALCULATOR</div>
+                <div>EDITION 2026 <span class="accent-dot">●</span></div>
+            </div>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="poster-hero">
+            <div class="hero-left">
+                <h1 class="hero-headline">
+                    KNOW<br>
+                    WHAT YOU<br>
+                    <span class="red-text">NEED.</span>
+                </h1>
+                <p class="hero-desc">
+                    Eliminate exam guesswork. Instantly know the exact marks needed in your semester examination to hit your target percentage or pass safely.
+                </p>
+                <div class="weightage-pill-box">
+                    <span class="weightage-pill red">MODULES 40%</span>
+                    <span class="weightage-pill black">PAPER EXAM 60%</span>
+                </div>
+            </div>
+
+            <!-- Geometric Graphic -->
+            <div class="hero-graphic-wrap" aria-hidden="true">
+                <div class="bauhaus-card">
+                    <svg viewBox="0 0 200 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Dots Grid -->
+                        <circle cx="25" cy="25" r="4" fill="#171717" />
+                        <circle cx="45" cy="25" r="4" fill="#171717" />
+                        <circle cx="65" cy="25" r="4" fill="#171717" />
+                        <circle cx="25" cy="45" r="4" fill="#171717" />
+                        <circle cx="45" cy="45" r="4" fill="#171717" />
+                        <circle cx="65" cy="45" r="4" fill="#171717" />
+                        
+                        <!-- Solid Bauhaus Shapes -->
+                        <rect x="110" y="20" width="70" height="70" fill="#E6332A" />
+                        <path d="M 20 180 A 80 80 0 0 1 100 100 L 20 100 Z" fill="#171717" />
+                        
+                        <!-- Diagonal Accent Lines -->
+                        <line x1="110" y1="115" x2="180" y2="185" stroke="#171717" stroke-width="2.5" />
+                        <line x1="125" y1="115" x2="195" y2="185" stroke="#171717" stroke-width="2.5" />
+                        <line x1="140" y1="115" x2="205" y2="180" stroke="#171717" stroke-width="2.5" />
+
+                        <!-- Center Red Focus Circle -->
+                        <circle cx="105" cy="140" r="12" fill="#E6332A" />
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- How To Use / 4 Steps -->
+        <section class="steps-container">
+            <div class="section-tag">
+                <span>HOW TO USE IN 4 EASY STEPS</span>
+                <span>STEP-BY-STEP GUIDE</span>
+            </div>
+
+            <div class="steps-grid">
+                <!-- Step 1 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-num">01</div>
+                        <h2 class="step-title">Enter Module Marks</h2>
+                    </div>
+                    <p class="step-body">
+                        Choose your total module count (up to 7) and enter your marks scored so far <strong>out of 20</strong> for completed modules.
+                    </p>
+                    <span class="step-pill">Modules contribute 40%</span>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-num">02</div>
+                        <h2 class="step-title">Select Your Target</h2>
+                    </div>
+                    <p class="step-body">
+                        Pick quick goals like <strong>40% (Pass)</strong>, <strong>50%</strong>, <strong>60% (1st Class)</strong>, <strong>80% (Distinction)</strong>, or type any custom target percentage.
+                    </p>
+                    <span class="step-pill">Target selector & custom input</span>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="step-card highlight">
+                    <div class="step-header">
+                        <div class="step-num">03</div>
+                        <h2 class="step-title">Get Marks Needed (/60)</h2>
+                    </div>
+                    <p class="step-body">
+                        Hit <strong>Calculate</strong> to instantly see your internal assessment total out of 40 and exactly how many marks you need in the final exam paper <strong>out of 60</strong>.
+                    </p>
+                    <span class="step-pill" style="background:#FFEDE9; color:#E6332A; font-weight:800;">Real-time achievability indicator</span>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-num">04</div>
+                        <h2 class="step-title">Convert to /20 & Parts</h2>
+                    </div>
+                    <p class="step-body">
+                        Click <strong>"+ CONVERT TO /20"</strong> and specify your exam parts. Get an equalized target of <strong>10 Theory + 10 Practical</strong> marks per section!
+                    </p>
+                    <span class="step-pill">1 Part = 1 Exam Section (20 Marks)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Weightage Formula Strip -->
+        <section class="formula-box">
+            <div class="formula-content">
+                <span class="formula-title">OFFICIAL WEIGHTAGE FORMULA</span>
+                <span class="formula-equation">
+                    Final % = (Module Avg &times; 40%) + (Paper Score &times; 60%)
+                </span>
+            </div>
+            <div class="formula-badge">
+                100% RELIABLE CALCULATION
+            </div>
+        </section>
+
+        <!-- Access / Scan Link Strip -->
+        <section class="access-strip">
+            <div class="url-box">
+                <span class="url-label">ONLINE CALCULATOR WEB ADDRESS</span>
+                <a href="https://semster-marks-calculatro-six.vercel.app" target="_blank" rel="noopener" class="url-link">
+                    semster-marks-calculatro-six.vercel.app &rarr;
+                </a>
+            </div>
+
+            <!-- SVG QR Code representing the live URL -->
+            <div class="qr-wrapper">
+                <img 
+                    class="qr-code-img"
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https%3A%2F%2Fsemster-marks-calculatro-six.vercel.app&color=17-17-17&bgcolor=FFFFFF" 
+                    alt="QR Code to open Exam Mark Calculator"
+                    loading="lazy"
+                >
+                <div class="qr-text">
+                    <span class="qr-scan-title">SCAN TO USE</span>
+                    <span class="qr-scan-sub">Open directly on phone</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="poster-footer">
+            <div>&copy; 2026 CENTAGON &bull; EVERY SIDE MATTERS</div>
+            <div class="social-tags">
+                <a href="https://www.centagon.in/" target="_blank" rel="noopener">centagon.in</a>
+                <a href="https://www.instagram.com/centagon.in/" target="_blank" rel="noopener">@centagon.in</a>
+                <a href="https://www.linkedin.com/company/centagon-tech" target="_blank" rel="noopener">LinkedIn</a>
+            </div>
+        </footer>
+
+    </main>
+
+</body>
+</html>

@@ -1,12 +1,11 @@
+import os
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .schema import ExamRequest
 from .calculator import calculate_exam
-
-
-from pathlib import Path
-from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(
     title="Exam Mark Calculator",
@@ -23,9 +22,29 @@ app.add_middleware(
 )
 
 frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
+data_dir = Path(__file__).resolve().parent.parent.parent / "data"
+students_file = data_dir / "students.json"
+
 if frontend_dir.exists():
     app.mount("/demo", StaticFiles(directory=str(frontend_dir), html=True), name="demo")
 
+
+def _get_students():
+    if not students_file.exists():
+        return []
+    try:
+        import json
+        with open(students_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def _save_students(students):
+    data_dir.mkdir(parents=True, exist_ok=True)
+    import json
+    with open(students_file, "w", encoding="utf-8") as f:
+        json.dump(students, f, indent=2, ensure_ascii=False)
 
 
 @app.get("/")
@@ -33,6 +52,110 @@ def home():
     return {
         "message": "Exam Mark Calculator API is running"
     }
+
+
+@app.post("/api/students")
+def register_student(payload: dict):
+    from datetime import datetime
+    students = _get_students()
+    email = (payload.get("email") or "").strip().lower()
+    google_id = payload.get("google_id") or payload.get("sub") or ""
+    now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    hub_names = {
+        "BCK": "Kozhikode",
+        "BCR": "Remote",
+        "BCE": "Ernakulam",
+        "BCT": "Trivandrum"
+    }
+    hub = (payload.get("hub") or "").strip().upper()
+    batch = (payload.get("batch") or "").strip()
+    hub_name = (payload.get("hub_name") or "").strip() or hub_names.get(hub, "")
+    batch_code = (payload.get("batch_code") or "").strip().upper()
+    if hub and batch and not batch_code:
+        batch_code = f"{hub} {batch}"
+
+    existing = None
+    for s in students:
+        if email and s.get("email", "").lower() == email:
+            existing = s
+            break
+        if google_id and s.get("google_id") == google_id:
+            existing = s
+            break
+
+    if existing:
+        existing["last_active"] = now_iso
+        existing["visit_count"] = existing.get("visit_count", 1) + 1
+        if payload.get("name"):
+            existing["name"] = payload["name"]
+        if payload.get("picture"):
+            existing["picture"] = payload["picture"]
+        if hub:
+            existing["hub"] = hub
+        if hub_name:
+            existing["hub_name"] = hub_name
+        if batch:
+            existing["batch"] = batch
+        if batch_code:
+            existing["batch_code"] = batch_code
+        record = existing
+    else:
+        record = {
+            "id": len(students) + 1,
+            "google_id": google_id,
+            "name": payload.get("name") or "Student",
+            "email": email or "unknown@student.edu",
+            "picture": payload.get("picture") or "",
+            "hub": hub,
+            "hub_name": hub_name,
+            "batch": batch,
+            "batch_code": batch_code,
+            "first_login": now_iso,
+            "last_active": now_iso,
+            "visit_count": 1,
+            "calculations_count": 0,
+            "user_agent": payload.get("user_agent") or ""
+        }
+        students.append(record)
+
+    _save_students(students)
+    is_admin = email in ADMIN_EMAILS
+    return {"status": "success", "student": record, "total_students": len(students), "is_admin": is_admin}
+
+
+@app.post("/api/students/calc")
+def track_calc(payload: dict):
+    from datetime import datetime
+    email = (payload.get("email") or "").strip().lower()
+    if not email:
+        return {"status": "skipped"}
+    students = _get_students()
+    now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for s in students:
+        if s.get("email", "").lower() == email:
+            s["calculations_count"] = s.get("calculations_count", 0) + 1
+            s["last_active"] = now_iso
+            _save_students(students)
+            break
+    return {"status": "success"}
+
+
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "centagon@admin")
+ADMIN_EMAILS = set(
+    e.strip().lower() for e in os.environ.get(
+        "ADMIN_EMAILS",
+        "dhanishmohd1136@gmail.com,admin@centagon.in"
+    ).split(",") if e.strip()
+)
+
+@app.get("/api/students")
+def list_students(key: str = None, email: str = None):
+    is_auth = (key == ADMIN_PASSWORD) or (email and email.strip().lower() in ADMIN_EMAILS)
+    if not is_auth:
+        raise HTTPException(status_code=404, detail="Not Found")
+    students = _get_students()
+    return {"status": "success", "total": len(students), "students": students}
 
 
 @app.post("/calculate")

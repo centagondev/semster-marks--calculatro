@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+data/*.json
+node_modules/
+*.log
+capture_*.js

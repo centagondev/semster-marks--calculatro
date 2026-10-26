@@ -8,20 +8,177 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=17">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-    <nav class="editorial-nav">
-        <div class="nav-left">CENTAGON</div>
-        <div class="nav-center">
-            <a href="#home">HOME</a>
-            <a href="#calculator">CALCULATOR</a>
-            <a href="#how-it-works">HOW IT WORKS</a>
+    <!-- MANDATORY Google Authentication Gate for First-Time / Unauthenticated Users -->
+    <div id="mandatory-auth-gate" class="mandatory-gate-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+        <div class="mandatory-gate-card">
+            <button type="button" class="gate-close-btn" id="close-gate-btn" aria-label="Close sign in">&times;</button>
+            <!-- Step 1: Google OAuth Sign-In -->
+            <div id="gate-step-signin" class="gate-step">
+                <div class="gate-accent-bar"></div>
+                
+                <div class="gate-header gate-header-simple">
+                    <span class="gate-brand-simple">CENTAGON</span>
+                    <h1 id="gate-title" class="gate-title-simple">SIGN IN</h1>
+                    <p id="gate-subtitle" class="gate-subtitle-simple">
+                        Sign in with Google to access the 400-Series Exam Calculator.
+                    </p>
+                </div>
+
+                <!-- Official Google Sign-In Button Container -->
+                <div class="gate-actions-simple">
+                    <div id="g_id_signin_mandatory_render" class="g-signin-mandatory-target"></div>
+                </div>
+            </div>
+
+            <!-- Step 2: Hub & Batch Selection (Dropdown + 2-digit 400 series) -->
+            <div id="gate-step-batch" class="gate-step hidden">
+                <div class="gate-accent-bar"></div>
+                
+                <div class="gate-header">
+                    <div class="gate-logo-row">
+                        <span class="gate-brand">CENTAGON</span>
+                        <span class="gate-badge">STEP 2 &mdash; STUDENT BATCH</span>
+                    </div>
+                    <h1 class="gate-title">SELECT YOUR HUB &amp; BATCH</h1>
+                    <p class="gate-subtitle">
+                        Welcome <strong id="batch-welcome-name">Student</strong>! Select your hub and enter your 2-digit batch number (e.g. <strong>21</strong> for <strong>421</strong>).
+                    </p>
+                </div>
+
+                <div class="batch-simple-form">
+                    <!-- 01: Training Hub Dropdown -->
+                    <div class="batch-field-group">
+                        <label for="hub-select" class="batch-field-label">01 &mdash; TRAINING HUB</label>
+                        <div class="hub-select-wrapper">
+                            <select id="hub-select" class="hub-select-dropdown" aria-label="Select Training Hub">
+                                <option value="BCK" selected>BCK &mdash; Kozhikode</option>
+                                <option value="BCR">BCR &mdash; Remote</option>
+                                <option value="BCE">BCE &mdash; Ernakulam</option>
+                                <option value="BCT">BCT &mdash; Trivandrum</option>
+                            </select>
+                            <span class="select-arrow" aria-hidden="true">&#9662;</span>
+                        </div>
+                    </div>
+
+                    <!-- 02: 400-Series Batch (User enters only 2 digits) -->
+                    <div class="batch-field-group">
+                        <label for="batch-2digit-input" class="batch-field-label">02 &mdash; BATCH NUMBER (400 SERIES)</label>
+                        <div class="batch-series-input-wrap">
+                            <span id="batch-hub-tag" class="batch-hub-tag">BCK</span>
+                            <span class="batch-series-prefix" title="400 Series">4</span>
+                            <input 
+                                type="text" 
+                                id="batch-2digit-input" 
+                                class="batch-2digit-input" 
+                                placeholder="21" 
+                                maxlength="2" 
+                                pattern="[0-9]{2}" 
+                                autocomplete="off"
+                                inputmode="numeric"
+                                aria-label="Enter last 2 digits of batch"
+                            />
+                        </div>
+                        <div class="batch-field-hint">
+                            400-series batch: only enter the last <strong>2 digits</strong> (e.g. enter <strong>21</strong> for batch <strong>421</strong>).
+                        </div>
+                    </div>
+
+                    <div id="batch-error-msg" class="batch-error-alert hidden"></div>
+
+                    <div class="gate-actions">
+                        <button type="button" id="submit-batch-btn" class="submit-batch-btn">
+                            CONFIRM &amp; ACCESS CALCULATOR &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <div class="gate-footer-note">
+                    Your batch details link your 400-series semester targets to your student registry profile.
+                </div>
+            </div>
         </div>
-        <div class="nav-right">
-            EVERY SIDE MATTERS <span class="status-dot">●</span>
-        </div>
-    </nav>
+    </div>
+
+    <!-- Main Application Wrapper (blurred when unauthenticated) -->
+    <div id="app-wrapper" class="app-wrapper">
+        <nav class="editorial-nav">
+            <div class="nav-left">CENTAGON</div>
+            <div class="nav-center">
+                <a href="#home">HOME</a>
+                <a href="#calculator">CALCULATOR</a>
+                <a href="#how-it-works">HOW IT WORKS</a>
+            </div>
+            <div class="nav-right">
+                <span class="nav-tagline">EVERY SIDE MATTERS <span class="status-dot">●</span></span>
+                
+                <!-- Auth Container -->
+                <div id="nav-auth-container" class="nav-auth-container">
+                    <!-- Logged Out State -->
+                    <div id="auth-logged-out" class="auth-logged-out">
+                        <button type="button" id="google-signin-btn" class="auth-btn">
+                            <svg class="google-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
+                                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.97 0 12c0 2.03.45 3.84 1.25 5.42l4.03-3.15z"/>
+                                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                            </svg>
+                            <span>SIGN IN</span>
+                        </button>
+                        <!-- Hidden container where official Google Sign-in button renders if preferred -->
+                        <div id="g_id_signin_hidden" style="display:none;"></div>
+                    </div>
+
+                    <!-- Logged In State -->
+                    <div id="auth-logged-in" class="auth-logged-in hidden">
+                        <button type="button" id="user-menu-btn" class="user-pill-btn" aria-haspopup="true" aria-expanded="false" title="Account Menu">
+                            <img id="user-avatar" class="user-avatar" src="" alt="User profile" />
+                            <span id="user-name-display" class="user-name">STUDENT</span>
+                            <span class="user-chevron">▾</span>
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div id="user-dropdown-menu" class="user-dropdown hidden">
+                            <div class="user-dropdown-header">
+                                <img id="user-dropdown-avatar" class="user-dropdown-avatar" src="" alt="Profile" />
+                                <div class="user-dropdown-info">
+                                    <div class="user-name-admin-row">
+                                        <div id="user-dropdown-name" class="user-dropdown-name">User Name</div>
+                                        <span id="user-admin-badge" class="user-admin-badge hidden">ADMIN</span>
+                                    </div>
+                                    <div id="user-dropdown-email" class="user-dropdown-email">user@gmail.com</div>
+                                    <div id="user-dropdown-batch-tag" class="user-batch-tag hidden">BATCH: BCK 421 &bull; KOZHIKODE</div>
+                                </div>
+                            </div>
+                            <div class="user-dropdown-divider"></div>
+                            <button type="button" id="edit-batch-btn" class="dropdown-item">
+                                <span class="item-icon">🏷️</span>
+                                <span>EDIT BATCH / HUB</span>
+                            </button>
+                            <button type="button" id="view-history-btn" class="dropdown-item">
+                                <span class="item-icon">📋</span>
+                                <span>SAVED RUNS</span>
+                                <span id="history-badge-count" class="history-badge">0</span>
+                            </button>
+                            <!-- Admin Panel (Only visible for dhanishmohd1136 and authorized admins) -->
+                            <a href="/admin" id="admin-panel-btn" class="dropdown-item item-admin hidden">
+                                <span class="item-icon">🛡️</span>
+                                <span>ADMIN PANEL</span>
+                                <span class="admin-badge-pill">ROOT</span>
+                            </a>
+                            <div class="user-dropdown-divider"></div>
+                            <button type="button" id="signout-btn" class="dropdown-item item-danger">
+                                <span class="item-icon">🚪</span>
+                                <span>SIGN OUT</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
 
     <main>
         <section id="home" class="hero-section grid-container">
@@ -330,7 +487,78 @@
             <a href="https://www.linkedin.com/company/centagon-tech" target="_blank" rel="noopener">LINKEDIN</a>
         </div>
     </footer>
+    </div><!-- End #app-wrapper -->
 
-    <script src="script.js?v=9"></script>
+
+
+    <!-- Saved Calculations History Modal -->
+    <div id="history-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="history-modal-title">
+        <div class="modal-card modal-large">
+            <div class="modal-header">
+                <div class="modal-title-row">
+                    <span class="modal-badge">STORED RUNS</span>
+                    <h2 id="history-modal-title" class="modal-title">CALCULATION HISTORY</h2>
+                </div>
+                <button type="button" class="modal-close-btn" id="close-history-modal" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="history-controls">
+                    <div class="history-user-info" id="history-user-info">
+                        Showing runs for <strong id="history-user-name">Student</strong>
+                    </div>
+                    <button type="button" id="clear-history-btn" class="text-button btn-danger-text">CLEAR ALL HISTORY</button>
+                </div>
+                
+                <div id="history-list" class="history-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <div id="history-empty" class="history-empty hidden">
+                    <div class="empty-icon">📐</div>
+                    <div class="empty-title">NO SAVED CALCULATIONS YET</div>
+                    <p class="empty-desc">Hit "CALCULATE" anytime to automatically save your semester target and required scores to your profile.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dedicated Sign Out Confirmation Modal -->
+    <div id="signout-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="signout-modal-title">
+        <div class="mandatory-gate-card signout-modal-card">
+            <button type="button" class="gate-close-btn" id="close-signout-btn" aria-label="Close sign out">&times;</button>
+            <div class="gate-accent-bar"></div>
+            
+            <div class="gate-header-simple">
+                <span class="gate-brand-simple">CENTAGON</span>
+                <h2 id="signout-modal-title" class="gate-title-simple">SIGN OUT</h2>
+                <p class="gate-subtitle-simple">
+                    Are you sure you want to sign out from your student account?
+                </p>
+            </div>
+
+            <!-- Student Profile Summary -->
+            <div class="signout-student-box">
+                <img id="signout-student-avatar" class="signout-avatar" src="" alt="Profile" />
+                <div class="signout-student-info">
+                    <div id="signout-student-name" class="signout-name">Student Name</div>
+                    <div id="signout-student-email" class="signout-email">email@student.com</div>
+                    <div id="signout-student-batch" class="signout-batch">BCK 421 &bull; KOZHIKODE</div>
+                </div>
+            </div>
+
+            <div class="signout-actions-row">
+                <button type="button" id="cancel-signout-btn" class="signout-btn-cancel">CANCEL</button>
+                <button type="button" id="confirm-signout-btn" class="signout-btn-confirm">SIGN OUT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="auth-toast" class="auth-toast hidden" role="status" aria-live="polite">
+        <span class="toast-dot">●</span>
+        <span id="toast-message">Notification</span>
+    </div>
+
+    <script src="script.js?v=17"></script>
 </body>
 </html>

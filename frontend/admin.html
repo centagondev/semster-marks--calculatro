@@ -617,6 +617,10 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                 <span>Calculator</span>
             </a>
+            <button id="clear-test-data-btn" class="nav-btn" title="Remove all dummy and test records">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Clear Test Data</span>
+            </button>
             <button id="export-csv-btn" class="nav-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span>Export CSV</span>
@@ -743,107 +747,19 @@
                 'BCT': 'Trivandrum'
             };
 
-            // Seeded database (used if /api/students is not reachable on static hosts like Vercel)
-            const SEED_STUDENTS = [
-                {
-                    id: 1,
-                    name: "Dhanish Mohd",
-                    email: "dhanishmohd1136@gmail.com",
-                    picture: "https://lh3.googleusercontent.com/a/ACg8ocKAnvYaieiyZb2zs4lthfL52BsaCCcz2Vyhx1vDBc9AquHbgBav=s96-c",
-                    hub: "BCK",
-                    hub_name: "Kozhikode",
-                    batch: "422",
-                    batch_code: "BCK 422",
-                    first_login: "2026-10-26 19:11:56",
-                    last_active: "2026-10-26 21:00:55",
-                    visit_count: 34,
-                    calculations_count: 3
-                },
-                {
-                    id: 2,
-                    name: "Alice Student",
-                    email: "alice@student.edu",
-                    picture: "",
-                    hub: "BCK",
-                    hub_name: "Kozhikode",
-                    batch: "415",
-                    batch_code: "BCK 415",
-                    first_login: "2026-10-26 19:36:38",
-                    last_active: "2026-10-26 19:36:38",
-                    visit_count: 1,
-                    calculations_count: 0
-                },
-                {
-                    id: 3,
-                    name: "Test Student",
-                    email: "test.student@centagon.in",
-                    picture: "",
-                    hub: "BCR",
-                    hub_name: "Remote",
-                    batch: "400",
-                    batch_code: "BCR 400",
-                    first_login: "2026-10-26 19:57:38",
-                    last_active: "2026-10-26 19:57:38",
-                    visit_count: 1,
-                    calculations_count: 0
-                },
-                {
-                    id: 4,
-                    name: "Rahul Sharma",
-                    email: "rahul.sharma@centagon.in",
-                    picture: "",
-                    hub: "BCK",
-                    hub_name: "Kozhikode",
-                    batch: "421",
-                    batch_code: "BCK 421",
-                    first_login: "2026-10-26 19:58:01",
-                    last_active: "2026-10-26 19:58:01",
-                    visit_count: 1,
-                    calculations_count: 0
-                },
-                {
-                    id: 5,
-                    name: "Anoop Kumar",
-                    email: "anoop@centagon.in",
-                    picture: "",
-                    hub: "BCR",
-                    hub_name: "Remote",
-                    batch: "405",
-                    batch_code: "BCR 405",
-                    first_login: "2026-10-26 19:58:08",
-                    last_active: "2026-10-26 19:58:08",
-                    visit_count: 1,
-                    calculations_count: 0
-                },
-                {
-                    id: 6,
-                    name: "Sneha Menon",
-                    email: "sneha@centagon.in",
-                    picture: "",
-                    hub: "BCE",
-                    hub_name: "Ernakulam",
-                    batch: "410",
-                    batch_code: "BCE 410",
-                    first_login: "2026-10-26 19:58:08",
-                    last_active: "2026-10-26 19:58:08",
-                    visit_count: 1,
-                    calculations_count: 0
-                },
-                {
-                    id: 7,
-                    name: "Vishnu Mohan",
-                    email: "vishnu@centagon.in",
-                    picture: "",
-                    hub: "BCT",
-                    hub_name: "Trivandrum",
-                    batch: "499",
-                    batch_code: "BCT 499",
-                    first_login: "2026-10-26 19:58:08",
-                    last_active: "2026-10-26 19:58:08",
-                    visit_count: 1,
-                    calculations_count: 0
-                }
-            ];
+            // Filter helper to purge dummy test records
+            function isTestDummy(s) {
+                if (!s) return true;
+                const email = (s.email || '').toLowerCase().trim();
+                const name = (s.name || '').toLowerCase().trim();
+                if (name.includes('test student') || name.includes('alice student')) return true;
+                if (email === 'alice@student.edu' || email === 'test.student@centagon.in') return true;
+                if (email.endsWith('@centagon.in') && !email.startsWith('admin@')) return true;
+                return false;
+            }
+
+            // Real students registry starting empty (students appear dynamically upon Google sign-in)
+            const SEED_STUDENTS = [];
 
             let allStudents = [];
             let currentFilterHub = 'ALL';
@@ -959,7 +875,7 @@
                     if (res.ok) {
                         const data = await res.json();
                         if (data && data.students && Array.isArray(data.students)) {
-                            allStudents = data.students;
+                            allStudents = data.students.filter(s => !isTestDummy(s));
                             localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
                             renderDashboard();
                             return;
@@ -969,20 +885,21 @@
                     console.log("Remote /api/students endpoint unavailable, using cached/synced storage");
                 }
 
-                // Fallback to local storage synced registry or initial seeded list
+                // Fallback to local storage synced registry
                 try {
                     const localData = localStorage.getItem('centagon_student_directory');
                     if (localData) {
                         const parsed = JSON.parse(localData);
                         if (Array.isArray(parsed) && parsed.length > 0) {
-                            allStudents = parsed;
+                            allStudents = parsed.filter(s => !isTestDummy(s));
+                            localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
                             renderDashboard();
                             return;
                         }
                     }
                 } catch(e) {}
 
-                allStudents = SEED_STUDENTS;
+                allStudents = [];
                 localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
                 renderDashboard();
             }
@@ -1136,6 +1053,17 @@
             });
 
             exportCsvBtn.addEventListener('click', exportCsv);
+
+            const clearTestDataBtn = document.getElementById('clear-test-data-btn');
+            if (clearTestDataBtn) {
+                clearTestDataBtn.addEventListener('click', () => {
+                    if (confirm("Purge test and dummy student records? Real registered students will be preserved.")) {
+                        allStudents = allStudents.filter(s => !isTestDummy(s));
+                        localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
+                        renderDashboard();
+                    }
+                });
+            }
 
             directorySearch.addEventListener('input', (e) => {
                 currentSearchQuery = e.target.value;

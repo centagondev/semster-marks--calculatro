@@ -941,6 +941,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function syncStudentToServer(user) {
         if (!user || !user.email) return;
+
+        // Sync to client-side student directory for admin portal resilience
+        try {
+            let directory = JSON.parse(localStorage.getItem('centagon_student_directory') || '[]');
+            if (!Array.isArray(directory)) directory = [];
+            const emailLower = user.email.trim().toLowerCase();
+            const idx = directory.findIndex(s => s.email && s.email.toLowerCase() === emailLower);
+            const nowIso = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+            if (idx >= 0) {
+                directory[idx] = {
+                    ...directory[idx],
+                    name: user.name || directory[idx].name,
+                    picture: user.picture || directory[idx].picture,
+                    hub: user.hub || directory[idx].hub,
+                    hub_name: user.hub_name || directory[idx].hub_name,
+                    batch: user.batch || directory[idx].batch,
+                    batch_code: user.batch_code || directory[idx].batch_code,
+                    last_active: nowIso,
+                    visit_count: (directory[idx].visit_count || 1) + 1
+                };
+            } else {
+                directory.unshift({
+                    id: directory.length + 1,
+                    name: user.name || 'Student',
+                    email: user.email,
+                    picture: user.picture || '',
+                    hub: user.hub || '',
+                    hub_name: user.hub_name || '',
+                    batch: user.batch || '',
+                    batch_code: user.batch_code || '',
+                    first_login: nowIso,
+                    last_active: nowIso,
+                    visit_count: 1,
+                    calculations_count: 0
+                });
+            }
+            localStorage.setItem('centagon_student_directory', JSON.stringify(directory));
+        } catch(e) {}
+
+        // Attempt server sync if backend is active
         fetch('/api/students', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -963,6 +1004,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function notifyCalculationToServer(email) {
         if (!email) return;
+
+        // Sync calculation count to client-side directory
+        try {
+            let directory = JSON.parse(localStorage.getItem('centagon_student_directory') || '[]');
+            if (Array.isArray(directory)) {
+                const emailLower = email.trim().toLowerCase();
+                const student = directory.find(s => s.email && s.email.toLowerCase() === emailLower);
+                if (student) {
+                    student.calculations_count = (student.calculations_count || 0) + 1;
+                    student.last_active = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                    localStorage.setItem('centagon_student_directory', JSON.stringify(directory));
+                }
+            }
+        } catch(e) {}
+
         fetch('/api/students/calc', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

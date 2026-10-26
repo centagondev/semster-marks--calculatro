@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centagon Admin Portal — Registered Students Directory</title>
+    <meta name="description" content="Centralized Student & Exam Directory for Centagon 400 Series Calculator.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='45' cy='45' r='35' fill='%23171717'/><rect x='45' y='45' width='35' height='35' fill='%23E6332A'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0F0F11;
+            --bg-card: #18181C;
+            --bg-card-hover: #222228;
+            --border-color: #2E2E36;
+            --text-main: #F4F3EE;
+            --text-muted: #8E8D99;
+            --color-red: #E6332A;
+            --color-red-hover: #FF463B;
+            --color-green: #10B981;
+            --color-blue: #3B82F6;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --shadow-neo: 4px 4px 0px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Navigation Bar */
+        .admin-nav {
+            background-color: #121215;
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: #171717;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .brand-icon::after {
+            content: '';
+            width: 14px;
+            height: 14px;
+            background: var(--color-red);
+            border-radius: 2px;
+        }
+
+        .brand-title {
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            text-transform: uppercase;
+        }
+
+        .brand-tag {
+            background: rgba(230, 51, 42, 0.15);
+            color: var(--color-red);
+            border: 1px solid rgba(230, 51, 42, 0.4);
+            padding: 2px 7px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            border-radius: 4px;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 150ms ease;
+        }
+
+        .nav-btn:hover {
+            color: var(--text-main);
+            border-color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .nav-btn.btn-red {
+            background: var(--color-red);
+            color: #FFFFFF;
+            border-color: var(--color-red);
+        }
+
+        .nav-btn.btn-red:hover {
+            background: var(--color-red-hover);
+        }
+
+        /* Container */
+        .admin-container {
+            max-width: 1280px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 28px 24px 60px;
+            flex: 1;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-title-wrap h1 {
+            font-size: 1.85rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .header-subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .admin-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--color-green);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--color-green);
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .metric-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-neo);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--border-color);
+        }
+
+        .metric-card.accent-red::before { background: var(--color-red); }
+        .metric-card.accent-green::before { background: var(--color-green); }
+        .metric-card.accent-blue::before { background: var(--color-blue); }
+
+        .metric-label {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            color: var(--text-main);
+            line-height: 1.1;
+        }
+
+        .metric-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* Controls / Filter Bar */
+        .controls-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 260px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: #121215;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 10px 14px 10px 38px;
+            outline: none;
+            transition: border-color 150ms ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--color-red);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .hub-filter-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .hub-filter-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            font-family: inherit;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 150ms ease;
+        }
+
+        .hub-filter-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .hub-filter-btn.active {
+            background: var(--text-main);
+            color: var(--bg-body);
+            border-color: var(--text-main);
+        }
+
+        /* Table Card */
+        .table-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow-neo);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: #131317;
+            color: var(--text-muted);
+            padding: 14px 18px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+            color: var(--text-main);
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .student-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .student-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            object-fit: cover;
+            background: #25252D;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            flex-shrink: 0;
+        }
+
+        .student-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .student-name {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .student-email {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .batch-badge {
+            background: #121215;
+            border: 1px solid var(--border-color);
+            color: #FFFFFF;
+            font-family: monospace;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .hub-name {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .calc-badge {
+            background: rgba(230, 51, 42, 0.12);
+            color: var(--color-red);
+            font-weight: 800;
+            font-size: 0.85rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .visit-badge {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .timestamp-cell {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Empty state */
+        .empty-row td {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Modal Authentication Overlay */
+        .auth-gate-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 12, 0.92);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 100;
+        }
+
+        .auth-gate-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 36px 32px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .gate-icon {
+            width: 52px;
+            height: 52px;
+            background: rgba(230, 51, 42, 0.1);
+            border: 1px solid rgba(230, 51, 42, 0.3);
+            color: var(--color-red);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 1.5rem;
+        }
+
+        .gate-title {
+            font-size: 1.35rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+            margin-bottom: 8px;
+        }
+
+        .gate-text {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .gate-input-group {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .gate-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .gate-input {
+            width: 100%;
+            background: #121215;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-family: monospace;
+            font-size: 1rem;
+            padding: 12px 14px;
+            outline: none;
+            transition: border-color 150ms ease;
+        }
+
+        .gate-input:focus {
+            border-color: var(--color-red);
+        }
+
+        .gate-error {
+            background: rgba(230, 51, 42, 0.15);
+            color: var(--color-red);
+            border: 1px solid rgba(230, 51, 42, 0.4);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .gate-btn {
+            width: 100%;
+            background: var(--color-red);
+            color: #FFFFFF;
+            border: none;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 150ms ease;
+        }
+
+        .gate-btn:hover {
+            background: var(--color-red-hover);
+        }
+
+        .gate-back-link {
+            display: inline-block;
+            margin-top: 18px;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none;
+            letter-spacing: 0.04em;
+            transition: color 150ms ease;
+        }
+
+        .gate-back-link:hover {
+            color: var(--text-main);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <nav class="admin-nav">
+        <a href="/" class="nav-brand">
+            <div class="brand-icon"></div>
+            <div>
+                <span class="brand-title">Centagon Directory</span>
+            </div>
+            <span class="brand-tag">ROOT PORTAL</span>
+        </a>
+
+        <div class="nav-actions">
+            <a href="/" class="nav-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Calculator</span>
+            </a>
+            <button id="export-csv-btn" class="nav-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export CSV</span>
+            </button>
+            <button id="admin-logout-btn" class="nav-btn btn-red">Sign Out</button>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="admin-container">
+        
+        <!-- Page Header -->
+        <header class="page-header">
+            <div class="header-title-wrap">
+                <h1>Registered Students Directory</h1>
+                <p class="header-subtitle">Real-time student registry & batch engagement analytics</p>
+            </div>
+            <div id="admin-status-pill" class="admin-status-badge">
+                <span class="status-dot"></span>
+                <span id="admin-user-display">ADMIN: DHANISH MOHD</span>
+            </div>
+        </header>
+
+        <!-- KPI Metrics Grid -->
+        <section class="metrics-grid">
+            <div class="metric-card accent-red">
+                <div class="metric-label">TOTAL STUDENTS REGISTERED</div>
+                <div id="metric-total-students" class="metric-value">0</div>
+                <div class="metric-sub">Across all Centagon hubs</div>
+            </div>
+            <div class="metric-card accent-green">
+                <div class="metric-label">ACTIVE TODAY</div>
+                <div id="metric-active-today" class="metric-value">0</div>
+                <div class="metric-sub">Calculated or logged in today</div>
+            </div>
+            <div class="metric-card accent-blue">
+                <div class="metric-label">TOP ENGAGED HUB</div>
+                <div id="metric-top-hub" class="metric-value">—</div>
+                <div id="metric-top-hub-sub" class="metric-sub">Highest registration volume</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">TOTAL CALCULATIONS</div>
+                <div id="metric-total-calcs" class="metric-value">0</div>
+                <div class="metric-sub">Marks projections generated</div>
+            </div>
+        </section>
+
+        <!-- Search & Filter Controls -->
+        <section class="controls-card">
+            <div class="search-box">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="directory-search" class="search-input" placeholder="Search by student name, email, batch, or hub..." />
+            </div>
+
+            <div class="hub-filter-group">
+                <button class="hub-filter-btn active" data-hub="ALL">ALL HUBS</button>
+                <button class="hub-filter-btn" data-hub="BCK">KOZHIKODE</button>
+                <button class="hub-filter-btn" data-hub="BCR">REMOTE</button>
+                <button class="hub-filter-btn" data-hub="BCE">ERNAKULAM</button>
+                <button class="hub-filter-btn" data-hub="BCT">TRIVANDRUM</button>
+            </div>
+        </section>
+
+        <!-- Students Table -->
+        <section class="table-card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Batch & Hub</th>
+                            <th>Email Address</th>
+                            <th>First Seen</th>
+                            <th>Last Active</th>
+                            <th>Visits</th>
+                            <th>Calculations</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-tbody">
+                        <tr class="empty-row">
+                            <td colspan="7">Loading registered students directory...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Admin Authentication Gate Modal (Shown if not logged in as Admin) -->
+    <div id="auth-gate" class="auth-gate-modal hidden">
+        <div class="auth-gate-card">
+            <div class="gate-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <h2 class="gate-title">ADMIN ACCESS ONLY</h2>
+            <p id="gate-desc" class="gate-text">This portal is restricted to Dhanish Mohd and authorized Centagon staff. Enter admin passcode to proceed.</p>
+
+            <div id="gate-error" class="gate-error">Invalid admin passcode. Please try again.</div>
+
+            <form id="passcode-form">
+                <div class="gate-input-group">
+                    <label class="gate-label" for="admin-passcode-input">ADMIN PASSCODE</label>
+                    <input type="password" id="admin-passcode-input" class="gate-input" placeholder="Enter admin passcode..." required autofocus />
+                </div>
+                <button type="submit" class="gate-btn">UNLOCK DASHBOARD &rarr;</button>
+            </form>
+
+            <a href="/" class="gate-back-link">&larr; Return to Student Calculator</a>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        (function() {
+            // Authorized Admin Emails
+            const ADMIN_EMAILS = ['dhanishmohd1136@gmail.com', 'admin@centagon.in'];
+            const ADMIN_DEFAULT_PASSCODE = 'centagon@admin';
+
+            // Hub Names
+            const HUB_NAMES = {
+                'BCK': 'Kozhikode',
+                'BCR': 'Remote',
+                'BCE': 'Ernakulam',
+                'BCT': 'Trivandrum'
+            };
+
+            // Seeded database (used if /api/students is not reachable on static hosts like Vercel)
+            const SEED_STUDENTS = [
+                {
+                    id: 1,
+                    name: "Dhanish Mohd",
+                    email: "dhanishmohd1136@gmail.com",
+                    picture: "https://lh3.googleusercontent.com/a/ACg8ocKAnvYaieiyZb2zs4lthfL52BsaCCcz2Vyhx1vDBc9AquHbgBav=s96-c",
+                    hub: "BCK",
+                    hub_name: "Kozhikode",
+                    batch: "422",
+                    batch_code: "BCK 422",
+                    first_login: "2026-10-26 19:11:56",
+                    last_active: "2026-10-26 21:00:55",
+                    visit_count: 34,
+                    calculations_count: 3
+                },
+                {
+                    id: 2,
+                    name: "Alice Student",
+                    email: "alice@student.edu",
+                    picture: "",
+                    hub: "BCK",
+                    hub_name: "Kozhikode",
+                    batch: "415",
+                    batch_code: "BCK 415",
+                    first_login: "2026-10-26 19:36:38",
+                    last_active: "2026-10-26 19:36:38",
+                    visit_count: 1,
+                    calculations_count: 0
+                },
+                {
+                    id: 3,
+                    name: "Test Student",
+                    email: "test.student@centagon.in",
+                    picture: "",
+                    hub: "BCR",
+                    hub_name: "Remote",
+                    batch: "400",
+                    batch_code: "BCR 400",
+                    first_login: "2026-10-26 19:57:38",
+                    last_active: "2026-10-26 19:57:38",
+                    visit_count: 1,
+                    calculations_count: 0
+                },
+                {
+                    id: 4,
+                    name: "Rahul Sharma",
+                    email: "rahul.sharma@centagon.in",
+                    picture: "",
+                    hub: "BCK",
+                    hub_name: "Kozhikode",
+                    batch: "421",
+                    batch_code: "BCK 421",
+                    first_login: "2026-10-26 19:58:01",
+                    last_active: "2026-10-26 19:58:01",
+                    visit_count: 1,
+                    calculations_count: 0
+                },
+                {
+                    id: 5,
+                    name: "Anoop Kumar",
+                    email: "anoop@centagon.in",
+                    picture: "",
+                    hub: "BCR",
+                    hub_name: "Remote",
+                    batch: "405",
+                    batch_code: "BCR 405",
+                    first_login: "2026-10-26 19:58:08",
+                    last_active: "2026-10-26 19:58:08",
+                    visit_count: 1,
+                    calculations_count: 0
+                },
+                {
+                    id: 6,
+                    name: "Sneha Menon",
+                    email: "sneha@centagon.in",
+                    picture: "",
+                    hub: "BCE",
+                    hub_name: "Ernakulam",
+                    batch: "410",
+                    batch_code: "BCE 410",
+                    first_login: "2026-10-26 19:58:08",
+                    last_active: "2026-10-26 19:58:08",
+                    visit_count: 1,
+                    calculations_count: 0
+                },
+                {
+                    id: 7,
+                    name: "Vishnu Mohan",
+                    email: "vishnu@centagon.in",
+                    picture: "",
+                    hub: "BCT",
+                    hub_name: "Trivandrum",
+                    batch: "499",
+                    batch_code: "BCT 499",
+                    first_login: "2026-10-26 19:58:08",
+                    last_active: "2026-10-26 19:58:08",
+                    visit_count: 1,
+                    calculations_count: 0
+                }
+            ];
+
+            let allStudents = [];
+            let currentFilterHub = 'ALL';
+            let currentSearchQuery = '';
+
+            // DOM References
+            const authGate = document.getElementById('auth-gate');
+            const passcodeForm = document.getElementById('passcode-form');
+            const passcodeInput = document.getElementById('admin-passcode-input');
+            const gateError = document.getElementById('gate-error');
+            const adminUserDisplay = document.getElementById('admin-user-display');
+            const adminLogoutBtn = document.getElementById('admin-logout-btn');
+            const exportCsvBtn = document.getElementById('export-csv-btn');
+            const directorySearch = document.getElementById('directory-search');
+            const hubFilterBtns = document.querySelectorAll('.hub-filter-btn');
+            const studentsTbody = document.getElementById('students-tbody');
+
+            // Metrics references
+            const metricTotalStudents = document.getElementById('metric-total-students');
+            const metricActiveToday = document.getElementById('metric-active-today');
+            const metricTopHub = document.getElementById('metric-top-hub');
+            const metricTopHubSub = document.getElementById('metric-top-hub-sub');
+            const metricTotalCalcs = document.getElementById('metric-total-calcs');
+
+            // Check Authentication
+            function verifyAdminAuth() {
+                // Check query parameter ?key=... or ?pin=...
+                const urlParams = new URLSearchParams(window.location.search);
+                const queryKey = urlParams.get('key') || urlParams.get('pin') || urlParams.get('token');
+                if (queryKey === ADMIN_DEFAULT_PASSCODE) {
+                    sessionStorage.setItem('centagon_admin_unlocked', 'true');
+                    return true;
+                }
+
+                // Check session unlock
+                if (sessionStorage.getItem('centagon_admin_unlocked') === 'true') {
+                    return true;
+                }
+
+                // Check logged-in user in localStorage
+                try {
+                    const rawUser = localStorage.getItem('centagon_auth_user');
+                    if (rawUser) {
+                        const user = JSON.parse(rawUser);
+                        if (user && user.email) {
+                            const e = user.email.trim().toLowerCase();
+                            if (ADMIN_EMAILS.includes(e) || e.includes('dhanishmohd1136')) {
+                                adminUserDisplay.textContent = `ADMIN: ${user.name.toUpperCase()} (${user.email})`;
+                                sessionStorage.setItem('centagon_admin_unlocked', 'true');
+                                return true;
+                            }
+                        }
+                    }
+                } catch(e) {}
+
+                return false;
+            }
+
+            function showGateModal() {
+                authGate.classList.remove('hidden');
+                setTimeout(() => passcodeInput.focus(), 100);
+            }
+
+            function hideGateModal() {
+                authGate.classList.add('hidden');
+            }
+
+            // CSV Sanitization to prevent CSV Formula Injection
+            function sanitizeCsvCell(val) {
+                let s = String(val === undefined || val === null ? '' : val).replace(/"/g, '""');
+                if (/^[=+\-@\t\r]/.test(s)) {
+                    s = "'" + s;
+                }
+                return s;
+            }
+
+            function exportCsv() {
+                const headers = ["ID", "Name", "Email", "Hub", "Hub Name", "Batch", "Batch Code", "First Login", "Last Active", "Visits", "Calculations Run"];
+                const lines = [headers.join(",")];
+
+                allStudents.forEach(s => {
+                    const row = [
+                        `"${sanitizeCsvCell(s.id)}"`,
+                        `"${sanitizeCsvCell(s.name)}"`,
+                        `"${sanitizeCsvCell(s.email)}"`,
+                        `"${sanitizeCsvCell(s.hub)}"`,
+                        `"${sanitizeCsvCell(s.hub_name)}"`,
+                        `"${sanitizeCsvCell(s.batch)}"`,
+                        `"${sanitizeCsvCell(s.batch_code)}"`,
+                        `"${sanitizeCsvCell(s.first_login)}"`,
+                        `"${sanitizeCsvCell(s.last_active)}"`,
+                        sanitizeCsvCell(s.visit_count || 1),
+                        sanitizeCsvCell(s.calculations_count || 0)
+                    ];
+                    lines.push(row.join(","));
+                });
+
+                const blob = new Blob([lines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `centagon_registered_students_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            // Load Student Records
+            async function loadStudents() {
+                try {
+                    const res = await fetch('/api/students');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.students && Array.isArray(data.students)) {
+                            allStudents = data.students;
+                            localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
+                            renderDashboard();
+                            return;
+                        }
+                    }
+                } catch(e) {
+                    console.log("Remote /api/students endpoint unavailable, using cached/synced storage");
+                }
+
+                // Fallback to local storage synced registry or initial seeded list
+                try {
+                    const localData = localStorage.getItem('centagon_student_directory');
+                    if (localData) {
+                        const parsed = JSON.parse(localData);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            allStudents = parsed;
+                            renderDashboard();
+                            return;
+                        }
+                    }
+                } catch(e) {}
+
+                allStudents = SEED_STUDENTS;
+                localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
+                renderDashboard();
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function renderDashboard() {
+                // Calculate KPIs
+                const totalStudents = allStudents.length;
+                metricTotalStudents.textContent = totalStudents;
+
+                // Active Today
+                const todayPrefix = new Date().toISOString().slice(0, 10);
+                const activeToday = allStudents.filter(s => (s.last_active || '').startsWith(todayPrefix)).length;
+                metricActiveToday.textContent = activeToday;
+
+                // Top Hub
+                const hubCounts = { 'BCK': 0, 'BCR': 0, 'BCE': 0, 'BCT': 0 };
+                allStudents.forEach(s => {
+                    const h = (s.hub || '').toUpperCase();
+                    if (hubCounts[h] !== undefined) hubCounts[h]++;
+                });
+
+                let topHubKey = 'BCK';
+                let maxCount = -1;
+                Object.entries(hubCounts).forEach(([k, v]) => {
+                    if (v > maxCount) {
+                        maxCount = v;
+                        topHubKey = k;
+                    }
+                });
+
+                metricTopHub.textContent = topHubKey ? `${topHubKey} (${maxCount})` : '—';
+                metricTopHubSub.textContent = HUB_NAMES[topHubKey] ? `${HUB_NAMES[topHubKey]} Hub` : 'Highest volume';
+
+                // Total Calcs
+                const totalCalcs = allStudents.reduce((acc, s) => acc + (s.calculations_count || 0), 0);
+                metricTotalCalcs.textContent = totalCalcs;
+
+                // Filter & Render Table
+                renderTable();
+            }
+
+            function renderTable() {
+                let filtered = allStudents.slice();
+
+                // Hub filter
+                if (currentFilterHub !== 'ALL') {
+                    filtered = filtered.filter(s => (s.hub || '').toUpperCase() === currentFilterHub);
+                }
+
+                // Search query
+                if (currentSearchQuery.trim()) {
+                    const q = currentSearchQuery.trim().toLowerCase();
+                    filtered = filtered.filter(s => {
+                        const name = (s.name || '').toLowerCase();
+                        const email = (s.email || '').toLowerCase();
+                        const batchCode = (s.batch_code || '').toLowerCase();
+                        const hub = (s.hub || '').toLowerCase();
+                        const hubName = (s.hub_name || '').toLowerCase();
+                        return name.includes(q) || email.includes(q) || batchCode.includes(q) || hub.includes(q) || hubName.includes(q);
+                    });
+                }
+
+                if (filtered.length === 0) {
+                    studentsTbody.innerHTML = `
+                        <tr class="empty-row">
+                            <td colspan="7">No matching student records found. Try adjusting your search query or filter.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                // Show latest records first
+                filtered.slice().reverse().forEach(s => {
+                    const name = escapeHtml(s.name || 'Student');
+                    const email = escapeHtml(s.email || 'N/A');
+                    const hub = escapeHtml((s.hub || '').toUpperCase());
+                    const hubName = escapeHtml(s.hub_name || HUB_NAMES[hub] || 'General Hub');
+                    const batch = escapeHtml(s.batch || '');
+                    const batchCode = escapeHtml(s.batch_code || (hub && batch ? `${hub} ${batch}` : 'PENDING'));
+                    const firstSeen = escapeHtml(s.first_login || '—');
+                    const lastActive = escapeHtml(s.last_active || '—');
+                    const visits = s.visit_count || 1;
+                    const calcs = s.calculations_count || 0;
+
+                    let pic = s.picture;
+                    if (!pic || (!pic.startsWith('https://') && !pic.startsWith('data:image/'))) {
+                        const initial = (name.charAt(0) || 'S').toUpperCase();
+                        pic = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%23171717'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' font-family='sans-serif' font-size='16' font-weight='bold'>${initial}</text></svg>`;
+                    } else {
+                        pic = escapeHtml(pic);
+                    }
+
+                    html += `
+                        <tr>
+                            <td>
+                                <div class="student-cell">
+                                    <img src="${pic}" alt="${name}" class="student-avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 40 40\\'><rect width=\\'40\\' height=\\'40\\' fill=\\'%23171717\\'/><text x=\\'50%25\\' y=\\'55%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23ffffff\\' font-family=\\'sans-serif\\' font-size=\\'16\\' font-weight=\\'bold\\'>S</text></svg>'">
+                                    <div class="student-info">
+                                        <span class="student-name">${name}</span>
+                                        <span class="student-email">${email}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <span class="batch-badge">${batchCode}</span>
+                                    <div class="hub-name">${hubName}</div>
+                                </div>
+                            </td>
+                            <td><a href="mailto:${email}" style="color:var(--color-red); text-decoration:none;">${email}</a></td>
+                            <td class="timestamp-cell">${firstSeen}</td>
+                            <td class="timestamp-cell">${lastActive}</td>
+                            <td><span class="visit-badge">${visits} ${visits === 1 ? 'visit' : 'visits'}</span></td>
+                            <td><span class="calc-badge">${calcs}</span></td>
+                        </tr>
+                    `;
+                });
+
+                studentsTbody.innerHTML = html;
+            }
+
+            // Event Listeners
+            passcodeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const code = passcodeInput.value.trim();
+                if (code === ADMIN_DEFAULT_PASSCODE) {
+                    sessionStorage.setItem('centagon_admin_unlocked', 'true');
+                    gateError.style.display = 'none';
+                    hideGateModal();
+                    loadStudents();
+                } else {
+                    gateError.style.display = 'block';
+                    passcodeInput.select();
+                }
+            });
+
+            adminLogoutBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('centagon_admin_unlocked');
+                window.location.href = '/';
+            });
+
+            exportCsvBtn.addEventListener('click', exportCsv);
+
+            directorySearch.addEventListener('input', (e) => {
+                currentSearchQuery = e.target.value;
+                renderTable();
+            });
+
+            hubFilterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    hubFilterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilterHub = btn.dataset.hub;
+                    renderTable();
+                });
+            });
+
+            // Initialize
+            if (verifyAdminAuth()) {
+                hideGateModal();
+                loadStudents();
+            } else {
+                showGateModal();
+            }
+        })();
+    </script>
+</body>
+</html>

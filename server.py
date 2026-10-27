@@ -236,7 +236,7 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
 
     def do_HEAD(self):
         clean_path = self.path.split("?")[0].rstrip("/")
-        if clean_path in ("/admin", "/admin/students", "/admin/export-csv", "/api/students"):
+        if clean_path in ("/admin", "/admin/index.html", "/admin.html", "/admin/students", "/admin/export-csv", "/api/students"):
             if not self._is_admin_authenticated():
                 self.send_error(404, "File not found")
                 return
@@ -425,30 +425,36 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
             return
 
         # Admin Dashboard Routes
-        if clean_path in ("/admin", "/admin/students"):
+        if clean_path in ("/admin", "/admin/index.html", "/admin.html", "/admin/students"):
             # Emergency/Secret direct bypass: ?key=... or ?secret=... matching ADMIN_PASSWORD
             parsed = urlparse(self.path)
             qs = parse_qs(parsed.query)
             secret_key = qs.get("key", [None])[0] or qs.get("secret", [None])[0]
             if secret_key and secret_key == ADMIN_PASSWORD:
-                students = get_all_students()
-                html = self._render_admin_html(students)
+                admin_file = FRONTEND_DIR / "admin" / "index.html"
+                if admin_file.exists():
+                    html_content = admin_file.read_text(encoding="utf-8")
+                else:
+                    html_content = self._render_admin_html(get_all_students())
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Set-Cookie", f"centagon_admin_session={ADMIN_SESSION_TOKEN}; Path=/; HttpOnly; SameSite=Lax")
                 self._send_cors_headers()
                 self.end_headers()
-                self.wfile.write(html.encode("utf-8"))
+                self.wfile.write(html_content.encode("utf-8"))
                 return
 
             if self._is_admin_authenticated():
-                students = get_all_students()
-                html = self._render_admin_html(students)
+                admin_file = FRONTEND_DIR / "admin" / "index.html"
+                if admin_file.exists():
+                    html_content = admin_file.read_text(encoding="utf-8")
+                else:
+                    html_content = self._render_admin_html(get_all_students())
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self._send_cors_headers()
                 self.end_headers()
-                self.wfile.write(html.encode("utf-8"))
+                self.wfile.write(html_content.encode("utf-8"))
             else:
                 # Completely invisible to unauthenticated students: returns standard 404
                 self.send_error(404, "File not found")

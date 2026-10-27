@@ -20,13 +20,21 @@ document.addEventListener('DOMContentLoaded', () => {
         resMarksNeeded: document.getElementById('res-marks-needed'),
         resMarksPercentage: document.getElementById('res-marks-percentage'),
         
-        // Convert to /20 & parts
-        convert20Btn: document.getElementById('convert-20-btn'),
-        convertBtnIcon: document.getElementById('convert-btn-icon'),
-        convertPanel: document.getElementById('convert-panel'),
+        // 20-mark score & Theory / Practical components
+        resScore20: document.getElementById('res-score-20'),
+        resConvertedScore: document.getElementById('res-score-20'),
+        resTheoryNeeded: document.getElementById('res-theory-needed'),
+        resPracticalNeeded: document.getElementById('res-practical-needed'),
+        
+        // Detailed Report toggle & panel
+        detailedReportBtn: document.getElementById('detailed-report-btn') || document.getElementById('convert-20-btn'),
+        detailedReportIcon: document.getElementById('detailed-report-icon') || document.getElementById('convert-btn-icon'),
+        detailedReportPanel: document.getElementById('detailed-report-panel') || document.getElementById('convert-panel'),
+        convert20Btn: document.getElementById('detailed-report-btn') || document.getElementById('convert-20-btn'),
+        convertBtnIcon: document.getElementById('detailed-report-icon') || document.getElementById('convert-btn-icon'),
+        convertPanel: document.getElementById('detailed-report-panel') || document.getElementById('convert-panel'),
         numExamParts: document.getElementById('num-exam-parts'),
         partsMaxLimit: document.getElementById('parts-max-limit'),
-        resConvertedScore: document.getElementById('res-converted-score'),
         resRawMarksLabel: document.getElementById('res-raw-marks-label'),
         resRawMarksNeeded: document.getElementById('res-raw-marks-needed'),
         resPerPartNeeded: document.getElementById('res-per-part-needed'),
@@ -91,7 +99,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Toast
         authToast: document.getElementById('auth-toast'),
-        toastMessage: document.getElementById('toast-message')
+        toastMessage: document.getElementById('toast-message'),
+
+        // Mobile Navigation Drawer
+        mobileMenuToggle: document.getElementById('mobile-menu-toggle'),
+        mobileNavDrawer: document.getElementById('mobile-nav-drawer'),
+        mobileNavBackdrop: document.getElementById('mobile-nav-backdrop'),
+        closeMobileNav: document.getElementById('close-mobile-nav'),
+        mobileHistoryBtn: document.getElementById('mobile-history-btn'),
+        mobileAdminBtn: document.getElementById('mobile-admin-btn'),
+        mobileHistoryCount: document.getElementById('mobile-history-count')
     };
 
     // State
@@ -432,54 +449,20 @@ document.addEventListener('DOMContentLoaded', () => {
         refs.numExamParts.addEventListener('input', handleExamPartsChange);
     }
 
-    // Toggle Convert to /20 & parts question
-    if (refs.convert20Btn) {
-        refs.convert20Btn.addEventListener('click', () => {
-            const isNowOpen = refs.convertPanel.classList.toggle('hidden') === false;
-            if (refs.convertBtnIcon) {
-                refs.convertBtnIcon.textContent = isNowOpen ? '−' : '+';
-            }
-            refs.convert20Btn.classList.toggle('active', isNowOpen);
-            if (isNowOpen) {
-                if (!lastCalcData) {
-                    recalculate();
-                }
-                const totalModules = parseInt(refs.numModules.value) || 1;
-                if (refs.numExamParts) {
-                    refs.numExamParts.max = totalModules;
-                    if (parseInt(refs.numExamParts.value) > totalModules) {
-                        refs.numExamParts.value = totalModules;
-                    }
-                }
-                if (refs.partsMaxLimit) {
-                    refs.partsMaxLimit.textContent = totalModules;
-                }
-                updateConvertedDisplay();
-            }
-        });
-    }
+    // Toggle Detailed Report Panel
+    const reportBtn = refs.detailedReportBtn;
+    const reportPanel = refs.detailedReportPanel;
+    const reportIcon = refs.detailedReportIcon;
 
-    // Toggle What does Part mean info box
-    const partsInfoToggle = document.getElementById('parts-info-toggle');
-    const partsInfoContent = document.getElementById('parts-info-content');
-    if (partsInfoToggle && partsInfoContent) {
-        partsInfoToggle.addEventListener('click', () => {
-            const isHidden = partsInfoContent.classList.toggle('hidden');
-            partsInfoToggle.classList.toggle('active', !isHidden);
-            partsInfoToggle.setAttribute('aria-expanded', !isHidden);
-        });
-
-        // Auto-expand if URL contains #parts or ?parts
-        if (window.location.hash.includes('parts') || window.location.search.includes('parts')) {
-            if (refs.convertPanel) {
-                refs.convertPanel.classList.remove('hidden');
-                if (refs.convertBtnIcon) refs.convertBtnIcon.textContent = '−';
-                refs.convert20Btn.classList.add('active');
+    if (reportBtn && reportPanel) {
+        reportBtn.addEventListener('click', () => {
+            const isNowOpen = reportPanel.classList.toggle('hidden') === false;
+            if (reportIcon) {
+                reportIcon.textContent = isNowOpen ? '−' : '+';
             }
-            partsInfoContent.classList.remove('hidden');
-            partsInfoToggle.classList.add('active');
-            partsInfoToggle.setAttribute('aria-expanded', 'true');
-        }
+            reportBtn.classList.toggle('active', isNowOpen);
+            reportBtn.setAttribute('aria-expanded', isNowOpen.toString());
+        });
     }
 
     refs.addModuleBtn.addEventListener('click', () => {
@@ -491,26 +474,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    refs.targetBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            refs.targetBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            refs.customTarget.value = btn.dataset.val;
+    if (refs.targetBtns && refs.targetBtns.length > 0) {
+        refs.targetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                refs.targetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                if (refs.customTarget) refs.customTarget.value = btn.dataset.val;
+                if (state.hasCalculated) recalculate();
+            });
+        });
+    }
+
+    if (refs.customTarget) {
+        refs.customTarget.addEventListener('input', () => {
+            const val = parseFloat(refs.customTarget.value);
+            if (refs.targetBtns) {
+                refs.targetBtns.forEach(btn => {
+                    if (parseFloat(btn.dataset.val) === val) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
             if (state.hasCalculated) recalculate();
         });
-    });
-
-    refs.customTarget.addEventListener('input', () => {
-        const val = parseFloat(refs.customTarget.value);
-        refs.targetBtns.forEach(btn => {
-            if (parseFloat(btn.dataset.val) === val) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-        if (state.hasCalculated) recalculate();
-    });
+    }
 
     // Dynamic Parts Breakdown Render (clean & simple: only marks needed to pass)
     function renderPartsBreakdown() {
@@ -652,12 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (examParts < 1) examParts = 1;
         if (examParts > totalModules) examParts = totalModules;
 
-        const targetPct = parseFloat(refs.customTarget.value);
-
-        if (isNaN(targetPct) || targetPct <= 0 || targetPct > 100) {
-            showError("Target percentage must be between 0 and 100.");
-            return;
-        }
+        const targetPct = (refs.customTarget && parseFloat(refs.customTarget.value)) ? parseFloat(refs.customTarget.value) : 40.0;
 
         hideError();
 
@@ -703,19 +687,49 @@ document.addEventListener('DOMContentLoaded', () => {
         refs.resultPlaceholder.classList.add('hidden');
         refs.resultDisplay.classList.remove('hidden');
 
+        // Calculate score out of 20 and Theory & Practical components
+        const marksNeeded60 = data.marks_needed;
+        const score20 = marksNeeded60 / 3.0;
+
+        let theoryNeeded = 0;
+        let practicalNeeded = 3.0; // Mandatory min 3.0 practical cutoff
+
+        if (marksNeeded60 <= 0) {
+            theoryNeeded = 0.0;
+            practicalNeeded = 3.0;
+        } else if (score20 > 20.0) {
+            theoryNeeded = 10.0;
+            practicalNeeded = 10.0;
+        } else if (score20 <= 3.0) {
+            theoryNeeded = 0.0;
+            practicalNeeded = 3.0;
+        } else if (score20 <= 6.0) {
+            practicalNeeded = 3.0;
+            theoryNeeded = score20 - 3.0;
+        } else {
+            theoryNeeded = score20 / 2.0;
+            practicalNeeded = score20 / 2.0;
+        }
+
+        // Primary Display (Score out of 20, Theory & Practical)
+        if (refs.resScore20) {
+            refs.resScore20.textContent = `${score20.toFixed(2)} / 20`;
+        }
+        if (refs.resTheoryNeeded) {
+            refs.resTheoryNeeded.innerHTML = `${theoryNeeded.toFixed(2)} <span class="component-denom">/ 10</span>`;
+        }
+        if (refs.resPracticalNeeded) {
+            refs.resPracticalNeeded.innerHTML = `${practicalNeeded.toFixed(2)} <span class="component-denom">/ 10</span>`;
+        }
+
+        // Detailed Report fields
         refs.resTarget.textContent = `${data.target_percentage}%`;
-        
         refs.resModuleAggregate.textContent = `${data.module_aggregate.toFixed(2)} / 40`;
         refs.resModulesSummary.textContent = `${formatNumber(data.completed_modules)} / ${formatNumber(data.number_of_modules)} Completed • ${formatNumber(data.remaining_modules)} Remaining (0 marks)`;
-
-        // Final paper exam needed out of 60
         refs.resMarksNeeded.textContent = `${data.marks_needed.toFixed(2)} / 60`;
         if (refs.resMarksPercentage) {
             refs.resMarksPercentage.textContent = `${data.required_percentage.toFixed(2)}% needed in final paper exam`;
         }
-
-        // Update converted values and parts breakdown
-        updateConvertedDisplay();
 
         // Status Styling & Badges
         refs.resStatusContainer.className = 'result-status';
@@ -728,7 +742,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             refs.resStatusContainer.classList.add('status-success');
         }
-        refs.resStatusText.textContent = data.status;
+
+        let displayStatus = data.status;
+        if (displayStatus === 'TARGET ACHIEVABLE') displayStatus = 'PASS ACHIEVABLE';
+        if (displayStatus === 'TARGET ACHIEVED') displayStatus = 'PASS ACHIEVED';
+        if (displayStatus === 'TARGET UNACHIEVABLE') displayStatus = 'PASS UNACHIEVABLE';
+        refs.resStatusText.textContent = displayStatus;
     }
 
     // Error handling
@@ -1084,9 +1103,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const isAdmin = isAdminUser(currentUser);
             if (refs.adminPanelBtn) {
                 if (isAdmin) {
+                    refs.adminPanelBtn.href = '/admin?key=centagon@admin';
                     refs.adminPanelBtn.classList.remove('hidden');
                 } else {
                     refs.adminPanelBtn.classList.add('hidden');
+                }
+            }
+            if (refs.mobileAdminBtn) {
+                if (isAdmin) {
+                    refs.mobileAdminBtn.href = '/admin?key=centagon@admin';
+                    refs.mobileAdminBtn.classList.remove('hidden');
+                } else {
+                    refs.mobileAdminBtn.classList.add('hidden');
                 }
             }
             if (refs.userAdminBadge) {
@@ -1126,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (refs.userDropdownEmail) refs.userDropdownEmail.textContent = '';
             if (refs.userDropdownBatchTag) refs.userDropdownBatchTag.classList.add('hidden');
             if (refs.adminPanelBtn) refs.adminPanelBtn.classList.add('hidden');
+            if (refs.mobileAdminBtn) refs.mobileAdminBtn.classList.add('hidden');
             if (refs.userAdminBadge) refs.userAdminBadge.classList.add('hidden');
         }
     }
@@ -1323,6 +1352,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (refs.historyBadgeCount) {
             refs.historyBadgeCount.textContent = list.length;
         }
+        if (refs.mobileHistoryCount) {
+            refs.mobileHistoryCount.textContent = list.length;
+        }
     }
 
     function saveCalculationToHistory(calcData) {
@@ -1331,7 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const history = getUserHistory();
             const currentModules = parseInt(refs.numModules.value) || 1;
             const examParts = refs.numExamParts ? (parseInt(refs.numExamParts.value) || 1) : 1;
-            const targetPct = parseFloat(refs.customTarget.value) || 40;
+            const targetPct = 40.0;
 
             const entry = {
                 id: Date.now(),
@@ -1376,15 +1408,20 @@ document.addEventListener('DOMContentLoaded', () => {
         history.forEach(item => {
             const card = document.createElement('div');
             card.className = 'history-card';
-            const isPass = item.status === 'PASS' || item.status === 'TARGET ACHIEVED';
-            const isFail = item.status === 'FAIL' || item.status === 'TARGET UNACHIEVABLE';
+            const isPass = item.status === 'PASS' || item.status === 'TARGET ACHIEVED' || item.status === 'PASS ACHIEVED';
+            const isFail = item.status === 'FAIL' || item.status === 'TARGET UNACHIEVABLE' || item.status === 'PASS UNACHIEVABLE';
+
+            let displayStatus = item.status;
+            if (displayStatus === 'TARGET ACHIEVABLE') displayStatus = 'PASS ACHIEVABLE';
+            if (displayStatus === 'TARGET ACHIEVED') displayStatus = 'PASS ACHIEVED';
+            if (displayStatus === 'TARGET UNACHIEVABLE') displayStatus = 'PASS UNACHIEVABLE';
 
             card.innerHTML = `
                 <div class="history-card-header">
                     <div class="history-target-wrap">
-                        <span class="history-target-badge">TARGET ${item.targetPercentage}%</span>
+                        <span class="history-target-badge">PASS 40%</span>
                         <span class="history-status-pill ${isPass ? 'status-pass' : (isFail ? 'status-fail' : '')}">
-                            ● ${item.status}
+                            ● ${displayStatus}
                         </span>
                     </div>
                     <span class="history-timestamp">${item.timestamp}</span>
@@ -1431,15 +1468,17 @@ document.addEventListener('DOMContentLoaded', () => {
         renderModules();
 
         if (refs.customTarget) {
-            refs.customTarget.value = item.targetPercentage;
+            refs.customTarget.value = item.targetPercentage || 40;
         }
-        refs.targetBtns.forEach(btn => {
-            if (parseFloat(btn.dataset.target) === item.targetPercentage) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
+        if (refs.targetBtns && refs.targetBtns.length > 0) {
+            refs.targetBtns.forEach(btn => {
+                if (parseFloat(btn.dataset.val) === item.targetPercentage) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
 
         if (refs.numExamParts && item.examParts) {
             refs.numExamParts.value = formatNumber(item.examParts);
@@ -1447,7 +1486,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         recalculate();
         closeAllModals();
-        showToast(`Loaded ${item.targetPercentage}% target run`);
+        showToast('Loaded 40% pass calculation run');
 
         if (window.innerWidth <= 768) {
             refs.resultDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1486,11 +1525,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (refs.historyModal) refs.historyModal.classList.remove('hidden');
     }
 
+    function openMobileNav() {
+        if (!refs.mobileNavDrawer) return;
+        refs.mobileNavDrawer.classList.remove('hidden');
+        if (refs.mobileMenuToggle) {
+            refs.mobileMenuToggle.classList.add('open');
+            refs.mobileMenuToggle.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    function closeMobileNavDrawer() {
+        if (!refs.mobileNavDrawer) return;
+        refs.mobileNavDrawer.classList.add('hidden');
+        if (refs.mobileMenuToggle) {
+            refs.mobileMenuToggle.classList.remove('open');
+            refs.mobileMenuToggle.setAttribute('aria-expanded', 'false');
+        }
+    }
+
     function closeAllModals() {
         if (refs.historyModal) refs.historyModal.classList.add('hidden');
         if (refs.signoutModal) refs.signoutModal.classList.add('hidden');
         if (refs.userDropdownMenu) refs.userDropdownMenu.classList.add('hidden');
         if (refs.userMenuBtn) refs.userMenuBtn.setAttribute('aria-expanded', 'false');
+        closeMobileNavDrawer();
     }
 
     if (refs.googleSigninBtn) {
@@ -1567,6 +1625,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (refs.signoutBtn) refs.signoutBtn.addEventListener('click', openSignoutModal);
     if (refs.clearHistoryBtn) refs.clearHistoryBtn.addEventListener('click', clearAllHistory);
+
+    // Mobile Navigation Drawer Listeners
+    if (refs.mobileMenuToggle) {
+        refs.mobileMenuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (refs.mobileNavDrawer && !refs.mobileNavDrawer.classList.contains('hidden')) {
+                closeMobileNavDrawer();
+            } else {
+                closeAllModals();
+                openMobileNav();
+            }
+        });
+    }
+
+    if (refs.closeMobileNav) {
+        refs.closeMobileNav.addEventListener('click', closeMobileNavDrawer);
+    }
+
+    if (refs.mobileNavBackdrop) {
+        refs.mobileNavBackdrop.addEventListener('click', closeMobileNavDrawer);
+    }
+
+    document.querySelectorAll('.mobile-nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            closeMobileNavDrawer();
+        });
+    });
+
+    if (refs.mobileHistoryBtn) {
+        refs.mobileHistoryBtn.addEventListener('click', () => {
+            closeMobileNavDrawer();
+            openHistoryModal();
+        });
+    }
 
     // Hub & Batch Event Listeners
     if (refs.hubSelect) {

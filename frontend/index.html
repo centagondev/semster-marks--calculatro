@@ -106,7 +106,9 @@
     <!-- Main Application Wrapper (blurred when unauthenticated) -->
     <div id="app-wrapper" class="app-wrapper">
         <nav class="editorial-nav">
-            <div class="nav-left">CENTAGON</div>
+            <div class="nav-left">
+                <a href="#home" class="nav-brand-link">CENTAGON</a>
+            </div>
             <div class="nav-center">
                 <a href="#home">HOME</a>
                 <a href="#calculator">CALCULATOR</a>
@@ -177,14 +179,62 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Mobile Hamburger Toggle Button -->
+                <button type="button" id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                </button>
             </div>
         </nav>
+
+        <!-- Mobile Navigation Drawer -->
+        <div id="mobile-nav-drawer" class="mobile-nav-drawer hidden" aria-label="Mobile Navigation">
+            <div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
+            <div class="mobile-nav-panel">
+                <div class="mobile-nav-header">
+                    <span class="mobile-nav-brand">CENTAGON</span>
+                    <span class="mobile-nav-motto">EVERY SIDE MATTERS <span class="status-dot">●</span></span>
+                    <button type="button" id="close-mobile-nav" class="mobile-nav-close" aria-label="Close navigation">&times;</button>
+                </div>
+                <div class="mobile-nav-links">
+                    <a href="#home" class="mobile-nav-link">
+                        <span class="nav-num">01</span>
+                        <span class="nav-text">HOME</span>
+                        <span class="nav-arrow">&rarr;</span>
+                    </a>
+                    <a href="#calculator" class="mobile-nav-link">
+                        <span class="nav-num">02</span>
+                        <span class="nav-text">CALCULATOR</span>
+                        <span class="nav-arrow">&rarr;</span>
+                    </a>
+                    <a href="#how-it-works" class="mobile-nav-link">
+                        <span class="nav-num">03</span>
+                        <span class="nav-text">HOW IT WORKS</span>
+                        <span class="nav-arrow">&rarr;</span>
+                    </a>
+                </div>
+                <div class="mobile-nav-actions">
+                    <button type="button" id="mobile-history-btn" class="mobile-nav-action-btn">
+                        <span class="action-icon">📋</span>
+                        <span>SAVED RUNS</span>
+                        <span id="mobile-history-count" class="mobile-badge">0</span>
+                    </button>
+                    <a href="/admin" id="mobile-admin-btn" class="mobile-nav-action-btn item-admin hidden">
+                        <span class="action-icon">🛡️</span>
+                        <span>ADMIN PANEL</span>
+                        <span class="admin-badge-pill">ROOT</span>
+                    </a>
+                </div>
+            </div>
+        </div>
 
     <main>
         <section id="home" class="hero-section grid-container">
             <div class="hero-content">
                 <h1 class="hero-title">KNOW<br>WHAT<br>YOU NEED.</h1>
-                <p class="hero-subtitle">Calculate the marks required to pass your exam<br>or reach your target percentage.</p>
+                <p class="hero-subtitle">Calculate the marks required to pass your semester exam<br>with the official 40% pass percentage.</p>
                 
                 <div class="hero-meta">
                     <span class="meta-item">MODULES 40%</span>
@@ -252,22 +302,6 @@
                     <button type="button" id="add-module-btn" class="text-button">+ ADD MODULE</button>
                 </div>
 
-                <div class="input-group mt-large">
-                    <label>TARGET</label>
-                    <div class="target-selector">
-                        <button type="button" class="target-btn active" data-val="40">40%</button>
-                        <button type="button" class="target-btn" data-val="50">50%</button>
-                        <button type="button" class="target-btn" data-val="60">60%</button>
-                        <button type="button" class="target-btn" data-val="70">70%</button>
-                        <button type="button" class="target-btn" data-val="80">80%</button>
-                    </div>
-                    <div class="custom-target-row">
-                        <label for="custom-target">CUSTOM</label>
-                        <input type="number" id="custom-target" value="40" min="0.1" max="100" step="0.1">
-                        <span class="input-suffix">%</span>
-                    </div>
-                </div>
-
                 <button type="button" id="calculate-btn" class="submit-button">CALCULATE &rarr;</button>
                 
                 <div id="error-message" class="error-banner hidden" aria-live="polite">
@@ -284,150 +318,64 @@
                 </div>
                 
                 <div class="result-display hidden" id="result-display" aria-live="polite">
-                    <div class="result-block">
-                        <span class="result-label">OVERALL TARGET</span>
-                        <div class="result-value" id="res-target">40%</div>
+                    <!-- Primary Result: Score out of 20 needed in final exam to pass -->
+                    <div class="result-block score-20-block">
+                        <span class="result-label">REQUIRED IN FINAL EXAM (OUT OF 20)</span>
+                        <div class="result-value result-large-20" id="res-score-20">0.00 / 20</div>
                     </div>
 
-                    <div class="result-block">
-                        <span class="result-label">INTERNAL ASSESSMENT (OUT OF 40)</span>
-                        <div class="result-value" id="res-module-aggregate">0.00 / 40</div>
-                        <div class="result-subtext" id="res-modules-summary">02 / 05 Completed &bull; 03 Remaining (0 marks)</div>
-                    </div>
-
-                    <!-- Required Paper Exam Score out of 60 -->
-                    <div class="result-block highlight-block">
-                        <span class="result-label">REQUIRED IN PAPER EXAM (OUT OF 60)</span>
-                        <div class="result-value" id="res-marks-needed">0.00 / 60</div>
-                        <div class="result-subtext" id="res-marks-percentage">0.00% needed in final paper exam</div>
-                    </div>
-
-                    <!-- Convert to /20 & Parts Section (Revealed on click) -->
-                    <div class="convert-section">
-                        <button type="button" id="convert-20-btn" class="convert-btn">
-                            <span id="convert-btn-icon">+</span> CONVERT TO /20
-                        </button>
-                        
-                        <div id="convert-panel" class="convert-panel hidden">
-                            <div class="parts-config-box">
-                                <label for="num-exam-parts" class="parts-config-label">
-                                    HOW MANY PARTS ARE THERE IN YOUR FINAL EXAMINATION?
-                                </label>
-                                <div class="parts-input-row">
-                                    <input type="number" id="num-exam-parts" value="1" min="1" max="5" step="1">
-                                    <span class="input-suffix">PARTS</span>
-                                </div>
-
-                                <div class="parts-info-toggle-wrapper">
-                                    <button type="button" id="parts-info-toggle" class="parts-info-toggle-btn" aria-expanded="false">
-                                        <span class="info-icon">?</span> WHAT DOES "PART" MEAN? (VIEW EXAMPLES)
-                                    </button>
-                                </div>
-
-                                <div id="parts-info-content" class="parts-info-content hidden">
-                                    <div class="parts-info-card">
-                                        <div class="parts-info-top">
-                                            <div class="parts-info-headline">
-                                                <span class="info-bulb">💡</span>
-                                                <strong>1 PART = 1 EXAM SECTION (20 MARKS)</strong>
-                                            </div>
-                                            <p class="parts-info-sub">
-                                                Your modules are grouped into <strong>Parts</strong> for the final exam (each part is 10 Theory + 10 Practical = 20 Marks):
-                                            </p>
-                                        </div>
-
-                                        <div class="parts-examples-flow-list">
-                                            <!-- Example 1 -->
-                                            <div class="example-flow-card">
-                                                <div class="example-flow-header">
-                                                    <span class="example-num-badge">EXAMPLE 1 &bull; 5 MODULES</span>
-                                                    <span class="example-outcome-badge">2 PARTS EXAM</span>
-                                                </div>
-                                                <div class="example-flow-body">
-                                                    <div class="flow-line">
-                                                        <span class="flow-label">3 Weeks FastAPI</span>
-                                                        <div class="flow-right">
-                                                            <span class="flow-arrow">➔</span>
-                                                            <span class="flow-target">PART 1 (20 Marks)</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="flow-line">
-                                                        <span class="flow-label">2 Weeks Docker</span>
-                                                        <div class="flow-right">
-                                                            <span class="flow-arrow">➔</span>
-                                                            <span class="flow-target">PART 2 (20 Marks)</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Example 2 -->
-                                            <div class="example-flow-card">
-                                                <div class="example-flow-header">
-                                                    <span class="example-num-badge">EXAMPLE 2 &bull; 7 MODULES</span>
-                                                    <span class="example-outcome-badge">2 PARTS EXAM</span>
-                                                </div>
-                                                <div class="example-flow-body">
-                                                    <div class="flow-line">
-                                                        <span class="flow-label">3 Weeks Machine Learning</span>
-                                                        <div class="flow-right">
-                                                            <span class="flow-arrow">➔</span>
-                                                            <span class="flow-target">PART 1 (20 Marks)</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="flow-line">
-                                                        <span class="flow-label">4 Weeks Deep Learning</span>
-                                                        <div class="flow-right">
-                                                            <span class="flow-arrow">➔</span>
-                                                            <span class="flow-target">PART 2 (20 Marks)</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Example 3 -->
-                                            <div class="example-flow-card">
-                                                <div class="example-flow-header">
-                                                    <span class="example-num-badge">EXAMPLE 3 &bull; 4 MODULES</span>
-                                                    <span class="example-outcome-badge single-part-badge">1 PART EXAM</span>
-                                                </div>
-                                                <div class="example-flow-body">
-                                                    <div class="flow-line">
-                                                        <span class="flow-label">4 Weeks React</span>
-                                                        <div class="flow-right">
-                                                            <span class="flow-arrow">➔</span>
-                                                            <span class="flow-target">PART 1 (All 4 in 1 Exam)</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                    <!-- Required in Theory and Practical Components -->
+                    <div class="components-two-col">
+                        <div class="component-card theory-card">
+                            <div class="component-card-top">
+                                <span class="component-title">THEORY</span>
+                                <span class="component-scale">OUT OF 10</span>
                             </div>
-
-                            <div class="converted-results-grid">
-                                <div class="converted-result-item">
-                                    <span class="converted-item-label">CONVERTED SCORE (OUT OF 20)</span>
-                                    <div class="converted-item-value" id="res-converted-score">0.00 / 20</div>
-                                </div>
+                            <div class="component-needed-val" id="res-theory-needed">0.00 <span class="component-denom">/ 10</span></div>
+                            <div class="component-note">Theory score needed to pass</div>
+                        </div>
+                        <div class="component-card practical-card">
+                            <div class="component-card-top">
+                                <span class="component-title">PRACTICAL</span>
+                                <span class="component-scale">OUT OF 10</span>
                             </div>
-
-                            <!-- Parts Breakdown -->
-                            <div class="parts-breakdown-section">
-                                <div class="parts-breakdown-header">
-                                    <span class="parts-breakdown-title">PARTS REQUIRED BREAKDOWN</span>
-                                </div>
-                                <div id="dynamic-parts-container" class="dynamic-parts-container">
-                                    <!-- Dynamic clean part cards -->
-                                </div>
-                            </div>
+                            <div class="component-needed-val practical-highlight" id="res-practical-needed">3.00 <span class="component-denom">/ 10</span></div>
+                            <div class="component-note"><span class="cutoff-pill">MANDATORY</span> Min 3.0 / 10 cutoff</div>
                         </div>
                     </div>
 
+                    <!-- Pass Status Pill -->
                     <div class="result-status" id="res-status-container">
                         <span class="status-dot-large" id="res-status-dot">●</span> 
-                        <span id="res-status-text">TARGET ACHIEVABLE</span>
+                        <span id="res-status-text">PASS ACHIEVABLE</span>
+                    </div>
+
+                    <!-- Detailed Report (Expandable on click) -->
+                    <div class="detailed-report-section">
+                        <button type="button" id="detailed-report-btn" class="detailed-report-btn" aria-expanded="false">
+                            <span id="detailed-report-icon">+</span> DETAILED REPORT
+                        </button>
+                        
+                        <div id="detailed-report-panel" class="detailed-report-panel hidden">
+                            <div class="detailed-report-card">
+                                <div class="result-block">
+                                    <span class="result-label">PASS PERCENTAGE</span>
+                                    <div class="result-value" id="res-target">40%</div>
+                                </div>
+
+                                <div class="result-block">
+                                    <span class="result-label">INTERNAL ASSESSMENT (OUT OF 40)</span>
+                                    <div class="result-value" id="res-module-aggregate">0.00 / 40</div>
+                                    <div class="result-subtext" id="res-modules-summary">02 / 05 Completed &bull; 03 Remaining (0 marks)</div>
+                                </div>
+
+                                <div class="result-block highlight-block">
+                                    <span class="result-label">REQUIRED IN PAPER EXAM (OUT OF 60)</span>
+                                    <div class="result-value" id="res-marks-needed">0.00 / 60</div>
+                                    <div class="result-subtext" id="res-marks-percentage">0.00% needed in final paper exam</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -516,7 +464,7 @@
                 <div id="history-empty" class="history-empty hidden">
                     <div class="empty-icon">📐</div>
                     <div class="empty-title">NO SAVED CALCULATIONS YET</div>
-                    <p class="empty-desc">Hit "CALCULATE" anytime to automatically save your semester target and required scores to your profile.</p>
+                    <p class="empty-desc">Hit "CALCULATE" anytime to automatically save your semester pass calculations and required scores to your profile.</p>
                 </div>
             </div>
         </div>

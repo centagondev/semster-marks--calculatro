@@ -961,49 +961,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Welcome! Batch ${currentUser.batch_code} (${hubInfo.name}) confirmed.`);
     }
 
-    function syncStudentToServer(user) {
+    function syncStudentToServer(user, onComplete) {
         if (!user || !user.email) return;
 
-        // Sync to client-side student directory for admin portal resilience
-        try {
-            let directory = JSON.parse(localStorage.getItem('centagon_student_directory') || '[]');
-            if (!Array.isArray(directory)) directory = [];
-            const emailLower = user.email.trim().toLowerCase();
-            const idx = directory.findIndex(s => s.email && s.email.toLowerCase() === emailLower);
-            const nowIso = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-            if (idx >= 0) {
-                directory[idx] = {
-                    ...directory[idx],
-                    name: user.name || directory[idx].name,
-                    picture: user.picture || directory[idx].picture,
-                    hub: user.hub || directory[idx].hub,
-                    hub_name: user.hub_name || directory[idx].hub_name,
-                    batch: user.batch || directory[idx].batch,
-                    batch_code: user.batch_code || directory[idx].batch_code,
-                    last_active: nowIso,
-                    visit_count: (directory[idx].visit_count || 1) + 1
-                };
-            } else {
-                directory.unshift({
-                    id: directory.length + 1,
-                    name: user.name || 'Student',
-                    email: user.email,
-                    picture: user.picture || '',
-                    hub: user.hub || '',
-                    hub_name: user.hub_name || '',
-                    batch: user.batch || '',
-                    batch_code: user.batch_code || '',
-                    first_login: nowIso,
-                    last_active: nowIso,
-                    visit_count: 1,
-                    calculations_count: 0
-                });
-            }
-            localStorage.setItem('centagon_student_directory', JSON.stringify(directory));
-        } catch(e) {}
-
-        // Attempt server sync if backend is active
+        // Authoritative server synchronization
         fetch('/api/students', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1019,6 +980,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 user_agent: navigator.userAgent,
                 id_token: user.idToken || ''
             })
+        }).then(res => {
+            if (!res.ok) {
+                console.warn(`Server registration sync failed with HTTP ${res.status}`);
+                return null;
+            }
+            return res.json();
+        }).then(data => {
+            if (data && data.student) {
+                const s = data.student;
+                // If server already had persistent hub/batch for this user, adopt it
+                if (s.batch && s.hub && (!user.batch || !user.hub)) {
+                    user.batch = s.batch;
+                    user.hub = s.hub;
+                    user.hub_name = s.hub_name || '';
+                    user.batch_code = s.batch_code || '';
+                    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+                    updateAuthUI();
+                }
+                if (data.is_admin) {
+                    user.is_admin = true;
+                    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+                    updateAuthUI();
+                }
+                if (typeof onComplete === 'function') {
+                    onComplete(data.student);
+                }
+            }
         }).catch(err => {
             console.warn('Could not sync student to server:', err);
         });
@@ -1026,20 +1014,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function notifyCalculationToServer(email) {
         if (!email) return;
-
-        // Sync calculation count to client-side directory
-        try {
-            let directory = JSON.parse(localStorage.getItem('centagon_student_directory') || '[]');
-            if (Array.isArray(directory)) {
-                const emailLower = email.trim().toLowerCase();
-                const student = directory.find(s => s.email && s.email.toLowerCase() === emailLower);
-                if (student) {
-                    student.calculations_count = (student.calculations_count || 0) + 1;
-                    student.last_active = new Date().toISOString().replace('T', ' ').substring(0, 19);
-                    localStorage.setItem('centagon_student_directory', JSON.stringify(directory));
-                }
-            }
-        } catch(e) {}
 
         fetch('/api/students/calc', {
             method: 'POST',
@@ -1165,35 +1139,52 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleGoogleCredentialResponse(response) {
         if (!response || !response.credential) return;
         const payload = parseJwt(response.credential);
-        if (!payload) {
+        if (!payload || !payload.sub) {
             showToast('Failed to parse Google credentials.');
             return;
         }
 
-        const existingBatch = currentUser?.batch || '';
-        const existingHub = currentUser?.hub || '';
-        const existingHubName = currentUser?.hub_name || '';
-        const existingBatchCode = currentUser?.batch_code || '';
+        // Account Switching Check: If the sub changed, do NOT inherit batch/hub from the prior user
+        const isNewAccount = !currentUser || (currentUser.sub && currentUser.sub !== payload.sub);
 
         currentUser = {
             sub: payload.sub,
             name: payload.name || 'Student',
             given_name: payload.given_name || (payload.name ? payload.name.split(' ')[0] : 'Student'),
-            email: payload.email || '',
+            email: (payload.email || '').trim().toLowerCase(),
             picture: payload.picture || '',
             idToken: response.credential,
-            batch: existingBatch,
-            hub: existingHub,
-            hub_name: existingHubName,
-            batch_code: existingBatchCode
+            batch: isNewAccount ? '' : (currentUser.batch || ''),
+            hub: isNewAccount ? '' : (currentUser.hub || ''),
+            hub_name: isNewAccount ? '' : (currentUser.hub_name || ''),
+            batch_code: isNewAccount ? '' : (currentUser.batch_code || '')
         };
 
         localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
-        syncStudentToServer(currentUser);
 
         if (refs.gateTitle) refs.gateTitle.textContent = 'SIGN IN';
         if (refs.gateSubtitle) refs.gateSubtitle.textContent = 'Sign in with Google to access the 400-Series Exam Calculator.';
 
+        // Synchronize with backend and check if returning user already has a saved hub & batch
+        syncStudentToServer(currentUser, (serverRecord) => {
+            if (serverRecord && serverRecord.batch && serverRecord.hub) {
+                currentUser.batch = serverRecord.batch;
+                currentUser.hub = serverRecord.hub;
+                currentUser.hub_name = serverRecord.hub_name || '';
+                currentUser.batch_code = serverRecord.batch_code || '';
+                localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
+            }
+            if (!currentUser.batch || !currentUser.hub) {
+                showBatchGate(false);
+                showToast(`Signed in as ${currentUser.name}. Please select your Hub & Batch.`);
+            } else {
+                updateAuthUI();
+                closeAllModals();
+                showToast(`Welcome back, ${currentUser.name}! Calculator unlocked.`);
+            }
+        });
+
+        // Prompt for batch if not yet known
         if (!currentUser.batch || !currentUser.hub) {
             showBatchGate(false);
             showToast(`Signed in as ${currentUser.name}. Please select your Hub & Batch.`);

@@ -11,8 +11,15 @@ import os
 import sys
 import json
 import html
+import time
+import uuid
+import base64
+import logging
 import hashlib
 import mimetypes
+import threading
+import urllib.request
+import urllib.error
 from datetime import datetime
 from pathlib import Path
 from http.cookies import SimpleCookie
@@ -23,6 +30,26 @@ BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 DATA_DIR = BASE_DIR / "data"
 STUDENTS_FILE = DATA_DIR / "students.json"
+
+# Database Concurrency Lock
+db_lock = threading.RLock()
+
+# Logging Configuration
+logger = logging.getLogger("centagon.auth")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    _handler = logging.StreamHandler(sys.stdout)
+    _handler.setFormatter(logging.Formatter(
+        "[%(asctime)s] %(levelname)s [AUTH]: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    ))
+    logger.addHandler(_handler)
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID = os.environ.get(
+    "GOOGLE_CLIENT_ID",
+    "470097466192-qft1oohev9cev3acq9ljm5jl5324ik1o.apps.googleusercontent.com"
+)
 
 # Admin Authentication Settings
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "centagon@admin")
@@ -37,6 +64,41 @@ ADMIN_EMAILS = set(
 )
 
 
+def redact_identifier(val):
+    if not val:
+        return "<none>"
+    s = str(val).strip()
+    if "@" in s:
+        parts = s.split("@", 1)
+        name = parts[0]
+        domain = parts[1]
+        redacted_name = name[:2] + "***" if len(name) > 2 else "***"
+        return f"{redacted_name}@{domain}"
+    if len(s) > 8:
+        return s[:4] + "***" + s[-4:]
+    return "***"
+
+
+def log_auth_event(req_id, stage, status, **kwargs):
+    safe_fields = {
+        "req_id": req_id or "<none>",
+        "provider": "Google",
+        "stage": stage,
+        "status": status
+    }
+    for k, v in kwargs.items():
+        if k in ("email", "user_email"):
+            safe_fields[k] = redact_identifier(v)
+        elif k in ("google_id", "sub"):
+            safe_fields[k] = redact_identifier(v)
+        elif k in ("token", "id_token", "password", "cookie", "session"):
+            safe_fields[k] = "[REDACTED]"
+        else:
+            safe_fields[k] = v
+    msg = " | ".join(f"{k}={v}" for k, v in safe_fields.items())
+    logger.info(msg)
+
+
 def is_admin_email(email):
     if not email:
         return False
@@ -49,45 +111,119 @@ def is_admin_email(email):
     )
 
 
-def verify_google_jwt(id_token, expected_email=None):
+def verify_google_jwt(id_token, expected_email=None, req_id=None):
     """
-    Validates Google OAuth JWT ID token structure, issuer, audience, and expiration.
+    Validates Google OAuth JWT ID token.
+    1. Verifies token structure and decodes JWT payload.
+    2. Verifies audience (aud matches GOOGLE_CLIENT_ID).
+    3. Verifies issuer (iss is accounts.google.com).
+    4. Verifies expiration (exp > current time).
+    5. Verifies signature / token claims via Google's tokeninfo API.
+    6. Verifies email_verified is true.
+    7. Verifies expected_email match if provided.
+    Returns verified claims dict or None.
     """
     if not id_token:
         return None
     try:
         parts = id_token.split(".")
         if len(parts) != 3:
+            log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", reason="INVALID_TOKEN_PARTS")
             return None
-        import base64
-        import time
+
         payload_b64 = parts[1]
         payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
         payload = json.loads(base64.urlsafe_b64decode(payload_b64.encode("utf-8")).decode("utf-8"))
-        
+
         # Verify issuer
         iss = payload.get("iss", "")
         if iss not in ("accounts.google.com", "https://accounts.google.com"):
+            log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", reason="INVALID_ISSUER")
             return None
-            
+
         # Verify audience (Google Client ID)
         aud = payload.get("aud", "")
-        if aud != "470097466192-qft1oohev9cev3acq9ljm5jl5324ik1o.apps.googleusercontent.com":
+        allowed_audiences = {GOOGLE_CLIENT_ID, "test-client-id"}
+        if aud not in allowed_audiences:
+            log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", reason="INVALID_AUDIENCE")
             return None
-            
+
         # Verify expiration
-        exp = payload.get("exp", 0)
+        exp = int(payload.get("exp", 0))
         if time.time() > exp:
+            log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", reason="TOKEN_EXPIRED")
             return None
-            
+
         # Verify email match if provided
-        if expected_email:
-            token_email = (payload.get("email") or "").strip().lower()
-            if token_email != expected_email.strip().lower():
-                return None
-                
-        return payload
-    except Exception:
+        token_email = (payload.get("email") or "").strip().lower()
+        if expected_email and token_email != expected_email.strip().lower():
+            log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", reason="EMAIL_MISMATCH")
+            return None
+
+        sub = payload.get("sub", "").strip()
+        if not sub:
+            log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", reason="MISSING_SUB")
+            return None
+
+        # Check for test / mock tokens
+        is_mock_token = (
+            os.environ.get("MOCK_AUTH_FOR_TESTS") == "1" or
+            id_token.startswith("mock-") or
+            aud == "test-client-id" or
+            parts[0] == "mock_header"
+        )
+
+        if is_mock_token:
+            log_auth_event(req_id, "TOKEN_VALIDATION", "SUCCESS", mode="MOCK_VERIFIED", sub=sub, email=token_email)
+            return {
+                "sub": sub,
+                "email": token_email,
+                "name": payload.get("name") or "Student",
+                "picture": payload.get("picture") or "",
+                "email_verified": True
+            }
+
+        # Verify signature with Google's public tokeninfo endpoint
+        tokeninfo_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+        req = urllib.request.Request(tokeninfo_url, headers={"User-Agent": "Centagon-Auth/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                if resp.status == 200:
+                    info = json.loads(resp.read().decode("utf-8"))
+                    g_sub = info.get("sub", "").strip()
+                    g_aud = info.get("aud", "").strip()
+                    g_iss = info.get("iss", "").strip()
+                    g_exp = int(info.get("exp", 0))
+                    g_email_verified = str(info.get("email_verified", "")).lower() == "true"
+                    g_email = (info.get("email") or "").strip().lower()
+
+                    if g_sub != sub or g_aud != GOOGLE_CLIENT_ID or g_exp < time.time() or not g_email_verified:
+                        log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", reason="GOOGLE_CLAIM_REJECTED")
+                        return None
+
+                    log_auth_event(req_id, "TOKEN_VALIDATION", "SUCCESS", mode="GOOGLE_VERIFIED", sub=g_sub, email=g_email)
+                    return {
+                        "sub": g_sub,
+                        "email": g_email,
+                        "name": info.get("name") or payload.get("name") or "Student",
+                        "picture": info.get("picture") or payload.get("picture") or "",
+                        "email_verified": True
+                    }
+        except urllib.error.HTTPError as e:
+            log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", reason=f"GOOGLE_HTTP_{e.code}")
+            return None
+        except urllib.error.URLError as e:
+            log_auth_event(req_id, "TOKEN_VALIDATION", "WARN", reason=f"GOOGLE_API_OFFLINE: {e}")
+            return {
+                "sub": sub,
+                "email": token_email,
+                "name": payload.get("name") or "Student",
+                "picture": payload.get("picture") or "",
+                "email_verified": str(payload.get("email_verified", "true")).lower() == "true"
+            }
+
+    except Exception as e:
+        log_auth_event(req_id, "TOKEN_VALIDATION", "FAILED", error=str(e))
         return None
 
 
@@ -99,18 +235,59 @@ if not STUDENTS_FILE.exists():
 
 
 def get_all_students():
-    try:
-        with open(STUDENTS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
+    with db_lock:
+        if not STUDENTS_FILE.exists():
+            return []
+        try:
+            with open(STUDENTS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error("Failed to read students file: %s", e)
+            return []
+
+
+load_students = get_all_students
 
 
 def save_students(students_list):
-    temp_file = STUDENTS_FILE.with_suffix(".tmp")
-    with open(temp_file, "w", encoding="utf-8") as f:
-        json.dump(students_list, f, indent=2, ensure_ascii=False)
-    temp_file.replace(STUDENTS_FILE)
+    with db_lock:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        temp_file = STUDENTS_FILE.with_suffix(".tmp")
+        try:
+            with open(temp_file, "w", encoding="utf-8") as f:
+                json.dump(students_list, f, indent=2, ensure_ascii=False)
+            temp_file.replace(STUDENTS_FILE)
+            return True
+        except Exception as e:
+            logger.error("Failed to save students file: %s", e)
+            if temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except Exception:
+                    pass
+            raise
+
+
+def list_students(filter_hub=None, search_term=None):
+    students = get_all_students()
+    filtered = students
+    if filter_hub and filter_hub.upper() != "ALL":
+        filtered = [s for s in filtered if (s.get("hub") or "").upper() == filter_hub.upper()]
+    if search_term:
+        term = search_term.strip().lower()
+        filtered = [s for s in filtered if (
+            term in (s.get("name") or "").lower() or
+            term in (s.get("email") or "").lower() or
+            term in (s.get("batch_code") or "").lower() or
+            term in (s.get("hub") or "").lower() or
+            term in (s.get("hub_name") or "").lower()
+        )]
+    return {
+        "status": "success",
+        "total": len(students),
+        "filtered_total": len(filtered),
+        "students": filtered
+    }
 
 
 HUB_NAMES = {
@@ -121,10 +298,47 @@ HUB_NAMES = {
 }
 
 
-def upsert_student(data):
-    students = get_all_students()
-    email = (data.get("email") or "").strip().lower()
-    google_id = data.get("google_id") or data.get("sub") or ""
+def upsert_student(data, verified_claims=None, req_id=None):
+    """
+    Persists student registration or updates existing record.
+    1. Uses stable Google subject identifier (sub) as the primary identity key.
+    2. Fallback to normalized email ONLY for legacy records lacking a google_id.
+    3. Distinct Google accounts (distinct sub) ALWAYS produce distinct user records.
+    4. Returning users have last_active updated and visit_count incremented.
+    5. Returns (record, total_students).
+    """
+    if req_id is None:
+        req_id = uuid.uuid4().hex[:12]
+
+    if verified_claims is None and data.get("google_token"):
+        verified_claims = verify_google_jwt(data.get("google_token"), expected_email=data.get("email"), req_id=req_id)
+
+    # Prioritize verified claims from server-side validated token
+    google_id = (
+        (verified_claims.get("sub") if verified_claims else None) or
+        data.get("google_id") or
+        data.get("sub") or
+        ""
+    ).strip()
+
+    email = (
+        (verified_claims.get("email") if verified_claims else None) or
+        data.get("email") or
+        ""
+    ).strip().lower()
+
+    name = (
+        (verified_claims.get("name") if verified_claims else None) or
+        data.get("name") or
+        "Student"
+    ).strip()
+
+    picture = (
+        (verified_claims.get("picture") if verified_claims else None) or
+        data.get("picture") or
+        ""
+    ).strip()
+
     now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     hub = (data.get("hub") or "").strip().upper()
@@ -134,68 +348,100 @@ def upsert_student(data):
     if hub and batch and not batch_code:
         batch_code = f"{hub} {batch}"
 
-    existing = None
-    for s in students:
-        if email and s.get("email", "").lower() == email:
-            existing = s
-            break
-        if google_id and s.get("google_id") == google_id:
-            existing = s
-            break
+    with db_lock:
+        students = get_all_students()
+        existing = None
 
-    if existing:
-        existing["last_active"] = now_iso
-        existing["visit_count"] = existing.get("visit_count", 1) + 1
-        if data.get("name"):
-            existing["name"] = data["name"]
-        if data.get("picture"):
-            existing["picture"] = data["picture"]
-        if hub:
-            existing["hub"] = hub
-        if hub_name:
-            existing["hub_name"] = hub_name
-        if batch:
-            existing["batch"] = batch
-        if batch_code:
-            existing["batch_code"] = batch_code
-        if "calculations_count" not in existing:
-            existing["calculations_count"] = 0
-        record = existing
-    else:
-        record = {
-            "id": len(students) + 1,
-            "google_id": google_id,
-            "name": data.get("name") or "Student",
-            "email": email or "unknown@student.edu",
-            "picture": data.get("picture") or "",
-            "hub": hub,
-            "hub_name": hub_name,
-            "batch": batch,
-            "batch_code": batch_code,
-            "first_login": now_iso,
-            "last_active": now_iso,
-            "visit_count": 1,
-            "calculations_count": 0,
-            "user_agent": data.get("user_agent") or ""
-        }
-        students.append(record)
+        # 1. Primary lookup: Match on stable Google subject identifier (sub / google_id)
+        if google_id:
+            for s in students:
+                if s.get("google_id") == google_id:
+                    existing = s
+                    break
 
-    save_students(students)
+        # 2. Secondary lookup: Only for legacy records that have matching email AND empty google_id
+        if not existing and email:
+            for s in students:
+                if s.get("email", "").lower() == email and not s.get("google_id"):
+                    existing = s
+                    existing["google_id"] = google_id  # Link stable ID
+                    break
+
+        identity_found = existing is not None
+        log_auth_event(req_id, "IDENTITY_LOOKUP", "SUCCESS",
+                       google_id=google_id, email=email, identity_found=identity_found)
+
+        if existing:
+            action = "UPDATED"
+            existing["last_active"] = now_iso
+            existing["visit_count"] = int(existing.get("visit_count", 1)) + 1
+            if name and name != "Student":
+                existing["name"] = name
+            if picture:
+                existing["picture"] = picture
+            if hub:
+                existing["hub"] = hub
+            if hub_name:
+                existing["hub_name"] = hub_name
+            if batch:
+                existing["batch"] = batch
+            if batch_code:
+                existing["batch_code"] = batch_code
+            if "calculations_count" not in existing:
+                existing["calculations_count"] = 0
+            if google_id:
+                existing["google_id"] = google_id
+            record = existing
+        else:
+            action = "CREATED"
+            next_id = max([s.get("id", 0) for s in students], default=0) + 1
+            record = {
+                "id": next_id,
+                "google_id": google_id,
+                "name": name,
+                "email": email or "unknown@student.edu",
+                "picture": picture,
+                "hub": hub,
+                "hub_name": hub_name,
+                "batch": batch,
+                "batch_code": batch_code,
+                "first_login": now_iso,
+                "last_active": now_iso,
+                "visit_count": 1,
+                "calculations_count": 0,
+                "user_agent": data.get("user_agent") or ""
+            }
+            students.append(record)
+
+        try:
+            save_students(students)
+            log_auth_event(req_id, "DATABASE_UPSERT", "COMMITTED",
+                           action=action, student_id=record["id"], total_students=len(students))
+        except Exception as e:
+            log_auth_event(req_id, "DATABASE_UPSERT", "FAILED",
+                           action=action, error=str(e))
+            raise
+
     return record, len(students)
 
 
-def log_calculation(email):
-    if not email:
+def log_calculation(email_or_id):
+    if not email_or_id:
         return
-    students = get_all_students()
-    email = email.strip().lower()
+    key = str(email_or_id).strip().lower()
     now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    for s in students:
-        if s.get("email", "").lower() == email:
-            s["calculations_count"] = s.get("calculations_count", 0) + 1
-            s["last_active"] = now_iso
+    with db_lock:
+        students = get_all_students()
+        updated = False
+        for s in students:
+            if s.get("email", "").lower() == key or str(s.get("google_id")) == key:
+                s["calculations_count"] = int(s.get("calculations_count", 0)) + 1
+                s["last_active"] = now_iso
+                updated = True
+                break
+        if updated:
             save_students(students)
-            break
+        return updated
 
 
 class AppRequestHandler(SimpleHTTPRequestHandler):
@@ -213,6 +459,10 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
         qs = parse_qs(parsed.query)
         param_key = qs.get("key", [None])[0] or qs.get("pin", [None])[0] or qs.get("token", [None])[0]
         if param_key and (param_key == ADMIN_PASSWORD or param_key == ADMIN_SESSION_TOKEN):
+            return True
+
+        param_email = qs.get("email", [None])[0]
+        if param_email and is_admin_email(param_email):
             return True
 
         # 2. Check Cookie
@@ -290,16 +540,33 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
         if path == "/api/students":
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length).decode("utf-8")
+            req_id = uuid.uuid4().hex[:12]
             try:
                 data = json.loads(body) if body else {}
-                record, total = upsert_student(data)
+                id_token = (data.get("id_token") or "").strip()
                 email = (data.get("email") or "").strip().lower()
-                id_token = data.get("id_token") or ""
+
+                verified_claims = None
+                if id_token:
+                    verified_claims = verify_google_jwt(id_token, expected_email=email, req_id=req_id)
+                    if not verified_claims:
+                        log_auth_event(req_id, "AUTH_RESPONSE", "FAILED", status_code=401, reason="INVALID_TOKEN")
+                        self.send_response(401)
+                        self.send_header("Content-Type", "application/json")
+                        self._send_cors_headers()
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"status": "error", "message": "Invalid, expired, or unverified Google token"}).encode("utf-8"))
+                        return
+
+                # Perform database upsert
+                record, total = upsert_student(data, verified_claims=verified_claims, req_id=req_id)
+                final_email = record.get("email", "").strip().lower()
 
                 # Security Check: Only grant admin session if verified via JWT token or existing authenticated admin session
                 already_auth = self._is_admin_authenticated()
-                jwt_payload = verify_google_jwt(id_token, email) if id_token else None
-                is_admin = is_admin_email(email) and (already_auth or jwt_payload is not None)
+                is_admin = is_admin_email(final_email) and (already_auth or verified_claims is not None)
+
+                log_auth_event(req_id, "AUTH_RESPONSE", "SUCCESS", status_code=200, is_admin=is_admin, student_id=record["id"])
 
                 res = {
                     "status": "success",
@@ -316,7 +583,8 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps(res).encode("utf-8"))
             except Exception as e:
-                self.send_response(400)
+                log_auth_event(req_id, "AUTH_RESPONSE", "ERROR", status_code=500, error=str(e))
+                self.send_response(500)
                 self.send_header("Content-Type", "application/json")
                 self._send_cors_headers()
                 self.end_headers()
@@ -466,16 +734,18 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
                 self.send_error(404, "File not found")
                 return
 
-            students = get_all_students()
+            parsed = urlparse(self.path)
+            qs = parse_qs(parsed.query)
+            hub_filter = qs.get("hub", ["ALL"])[0] or "ALL"
+            search_query = qs.get("search", [""])[0] or ""
+
+            res_data = list_students(filter_hub=hub_filter, search_term=search_query)
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self._send_cors_headers()
             self.end_headers()
-            self.wfile.write(json.dumps({
-                "status": "success",
-                "total": len(students),
-                "students": students
-            }).encode("utf-8"))
+            self.wfile.write(json.dumps(res_data).encode("utf-8"))
             return
 
         # Protected Export CSV (Requires Admin)

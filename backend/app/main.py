@@ -76,17 +76,21 @@ def register_student(payload: dict):
         batch_code = f"{hub} {batch}"
 
     existing = None
-    for s in students:
-        if email and s.get("email", "").lower() == email:
-            existing = s
-            break
-        if google_id and s.get("google_id") == google_id:
-            existing = s
-            break
+    if google_id:
+        for s in students:
+            if s.get("google_id") == google_id:
+                existing = s
+                break
+    if not existing and email:
+        for s in students:
+            if s.get("email", "").lower() == email and not s.get("google_id"):
+                existing = s
+                existing["google_id"] = google_id
+                break
 
     if existing:
         existing["last_active"] = now_iso
-        existing["visit_count"] = existing.get("visit_count", 1) + 1
+        existing["visit_count"] = int(existing.get("visit_count", 1)) + 1
         if payload.get("name"):
             existing["name"] = payload["name"]
         if payload.get("picture"):
@@ -99,10 +103,13 @@ def register_student(payload: dict):
             existing["batch"] = batch
         if batch_code:
             existing["batch_code"] = batch_code
+        if google_id:
+            existing["google_id"] = google_id
         record = existing
     else:
+        next_id = max([s.get("id", 0) for s in students], default=0) + 1
         record = {
-            "id": len(students) + 1,
+            "id": next_id,
             "google_id": google_id,
             "name": payload.get("name") or "Student",
             "email": email or "unknown@student.edu",

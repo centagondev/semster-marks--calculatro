@@ -805,6 +805,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const stored = localStorage.getItem(AUTH_KEY);
             if (stored) {
                 currentUser = JSON.parse(stored);
+                if (currentUser && currentUser.email) {
+                    syncStudentToServer(currentUser);
+                }
             }
         } catch (e) {
             currentUser = null;

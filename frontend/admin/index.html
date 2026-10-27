@@ -824,14 +824,13 @@
                 'BCT': 'Trivandrum'
             };
 
-            // Filter helper to purge dummy test records
+            // Filter helper to purge dummy test records (only explicit mocks)
             function isTestDummy(s) {
                 if (!s) return true;
                 const email = (s.email || '').toLowerCase().trim();
                 const name = (s.name || '').toLowerCase().trim();
                 if (name.includes('test student') || name.includes('alice student')) return true;
                 if (email === 'alice@student.edu' || email === 'test.student@centagon.in') return true;
-                if (email.endsWith('@centagon.in') && !email.startsWith('admin@')) return true;
                 return false;
             }
 
@@ -945,8 +944,9 @@
                 URL.revokeObjectURL(url);
             }
 
-            // Load Student Records
+            // Robust Multi-Source Student Loader
             async function loadStudents() {
+                let serverStudents = [];
                 try {
                     const res = await fetch('/api/students?key=' + encodeURIComponent(ADMIN_DEFAULT_PASSCODE), {
                         headers: { 'Authorization': 'Bearer ' + ADMIN_DEFAULT_PASSCODE }
@@ -954,31 +954,98 @@
                     if (res.ok) {
                         const data = await res.json();
                         if (data && data.students && Array.isArray(data.students)) {
-                            allStudents = data.students.filter(s => !isTestDummy(s));
-                            localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
-                            renderDashboard();
-                            return;
+                            serverStudents = data.students;
                         }
                     }
                 } catch(e) {
-                    console.log("Remote /api/students endpoint unavailable, using cached/synced storage");
+                    console.log("Remote /api/students endpoint note:", e);
                 }
 
-                // Fallback to local storage synced registry
+                // Collect local storage registry
+                let localStudents = [];
                 try {
                     const localData = localStorage.getItem('centagon_student_directory');
                     if (localData) {
                         const parsed = JSON.parse(localData);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            allStudents = parsed.filter(s => !isTestDummy(s));
-                            localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
-                            renderDashboard();
-                            return;
-                        }
+                        if (Array.isArray(parsed)) localStudents = parsed;
                     }
                 } catch(e) {}
 
-                allStudents = [];
+                // Collect active signed-in user
+                let activeUser = null;
+                try {
+                    const rawUser = localStorage.getItem('centagon_auth_user');
+                    if (rawUser) activeUser = JSON.parse(rawUser);
+                } catch(e) {}
+
+                // Deduplicate and merge by email
+                const map = new Map();
+
+                // 1. Ingest server records
+                serverStudents.forEach(s => {
+                    if (s && s.email) {
+                        map.set(s.email.toLowerCase().trim(), { ...s });
+                    }
+                });
+
+                // 2. Ingest localStorage directory records
+                localStudents.forEach(s => {
+                    if (s && s.email) {
+                        const k = s.email.toLowerCase().trim();
+                        if (!map.has(k)) {
+                            map.set(k, { ...s });
+                        } else {
+                            const ex = map.get(k);
+                            map.set(k, {
+                                ...ex,
+                                ...s,
+                                name: s.name || ex.name,
+                                hub: s.hub || ex.hub,
+                                hub_name: s.hub_name || ex.hub_name,
+                                batch: s.batch || ex.batch,
+                                batch_code: s.batch_code || ex.batch_code,
+                                visit_count: Math.max(ex.visit_count || 1, s.visit_count || 1),
+                                calculations_count: Math.max(ex.calculations_count || 0, s.calculations_count || 0)
+                            });
+                        }
+                    }
+                });
+
+                // 3. Ensure currently signed-in user is present
+                if (activeUser && activeUser.email) {
+                    const k = activeUser.email.toLowerCase().trim();
+                    const nowIso = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                    if (!map.has(k)) {
+                        map.set(k, {
+                            id: map.size + 1,
+                            name: activeUser.name || 'Student',
+                            email: activeUser.email,
+                            picture: activeUser.picture || '',
+                            hub: activeUser.hub || '',
+                            hub_name: activeUser.hub_name || '',
+                            batch: activeUser.batch || '',
+                            batch_code: activeUser.batch_code || (activeUser.hub && activeUser.batch ? `${activeUser.hub} ${activeUser.batch}` : ''),
+                            first_login: nowIso,
+                            last_active: nowIso,
+                            visit_count: 1,
+                            calculations_count: 0
+                        });
+                    } else {
+                        const ex = map.get(k);
+                        if (activeUser.hub && !ex.hub) ex.hub = activeUser.hub;
+                        if (activeUser.hub_name && !ex.hub_name) ex.hub_name = activeUser.hub_name;
+                        if (activeUser.batch && !ex.batch) ex.batch = activeUser.batch;
+                        if (activeUser.batch_code && !ex.batch_code) ex.batch_code = activeUser.batch_code;
+                    }
+                }
+
+                allStudents = Array.from(map.values()).filter(s => !isTestDummy(s));
+
+                // Assign clean 1-based IDs
+                allStudents.forEach((s, idx) => {
+                    s.id = idx + 1;
+                });
+
                 localStorage.setItem('centagon_student_directory', JSON.stringify(allStudents));
                 renderDashboard();
             }

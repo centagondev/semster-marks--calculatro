@@ -23,6 +23,14 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'dhanishmohd1136@gmail.com,adm
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || '';
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || '';
 
+// Zero-Cost Providers:
+// 1. GitHub Gist: uses existing GitHub account (GITHUB_GIST_ID & GITHUB_TOKEN)
+const GIST_ID = process.env.GITHUB_GIST_ID || '';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
+
+// 2. Free KVdb.io Key-Value Bucket (No account or credit card needed)
+const KVDB_BUCKET = process.env.KVDB_BUCKET || '';
+
 const HUB_NAMES = {
     'BCK': 'Kozhikode',
     'BCR': 'Remote',
@@ -278,7 +286,81 @@ function saveToLocalFile(students) {
     return saved;
 }
 
+async function fetchGistStudents() {
+    if (!GIST_ID || !GITHUB_TOKEN) return null;
+    try {
+        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'User-Agent': 'Centagon-Calculator',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const fileObj = data.files && (data.files['students.json'] || Object.values(data.files)[0]);
+        if (fileObj && fileObj.content) {
+            const parsed = JSON.parse(fileObj.content);
+            if (Array.isArray(parsed)) return parsed;
+        }
+    } catch (e) {
+        console.error('Failed to fetch from GitHub Gist:', e.message);
+    }
+    return null;
+}
+
+async function saveGistStudents(students) {
+    if (!GIST_ID || !GITHUB_TOKEN) return false;
+    try {
+        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'User-Agent': 'Centagon-Calculator',
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                files: {
+                    'students.json': {
+                        content: JSON.stringify(students, null, 2)
+                    }
+                }
+            })
+        });
+        return res.ok;
+    } catch (e) {
+        console.error('Failed to save to GitHub Gist:', e.message);
+        return false;
+    }
+}
+
+async function fetchKvdbStudents() {
+    if (!KVDB_BUCKET) return null;
+    try {
+        const res = await fetch(`https://kvdb.io/${KVDB_BUCKET}/centagon_students`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (Array.isArray(data)) return data;
+    } catch (e) {}
+    return null;
+}
+
+async function saveKvdbStudents(students) {
+    if (!KVDB_BUCKET) return false;
+    try {
+        const res = await fetch(`https://kvdb.io/${KVDB_BUCKET}/centagon_students`, {
+            method: 'POST',
+            body: JSON.stringify(students)
+        });
+        return res.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
 async function getAllStudents() {
+    // 1. Upstash Redis / Vercel KV REST API
     if (KV_URL && KV_TOKEN) {
         const kvResult = await executeKvCommand(['GET', 'centagon_students']);
         if (kvResult) {
@@ -292,10 +374,33 @@ async function getAllStudents() {
             }
         }
 
-        // If KV is currently empty, seed it with local records
         const seed = loadFromLocalFile();
         if (seed.length > 0) {
             await executeKvCommand(['SET', 'centagon_students', JSON.stringify(seed)]);
+            return seed;
+        }
+        return [];
+    }
+
+    // 2. GitHub Gist (100% Free, zero credit card required)
+    if (GIST_ID && GITHUB_TOKEN) {
+        const gistStudents = await fetchGistStudents();
+        if (gistStudents !== null) return gistStudents;
+        const seed = loadFromLocalFile();
+        if (seed.length > 0) {
+            await saveGistStudents(seed);
+            return seed;
+        }
+        return [];
+    }
+
+    // 3. Free KVdb bucket (100% Free, no account needed)
+    if (KVDB_BUCKET) {
+        const kvdbStudents = await fetchKvdbStudents();
+        if (kvdbStudents !== null) return kvdbStudents;
+        const seed = loadFromLocalFile();
+        if (seed.length > 0) {
+            await saveKvdbStudents(seed);
             return seed;
         }
         return [];
@@ -309,6 +414,16 @@ async function saveAllStudents(students) {
     if (KV_URL && KV_TOKEN) {
         const res = await executeKvCommand(['SET', 'centagon_students', JSON.stringify(students)]);
         if (res === 'OK' || res !== null) cloudSaved = true;
+    }
+
+    if (GIST_ID && GITHUB_TOKEN) {
+        const res = await saveGistStudents(students);
+        if (res) cloudSaved = true;
+    }
+
+    if (KVDB_BUCKET) {
+        const res = await saveKvdbStudents(students);
+        if (res) cloudSaved = true;
     }
 
     const localSaved = saveToLocalFile(students);

@@ -288,10 +288,13 @@ function saveToLocalFile(students) {
 
 async function fetchGistStudents() {
     if (!GIST_ID || !GITHUB_TOKEN) return null;
+    const authHeader = (GITHUB_TOKEN.startsWith('Bearer ') || GITHUB_TOKEN.startsWith('token ')) 
+        ? GITHUB_TOKEN 
+        : `Bearer ${GITHUB_TOKEN}`;
     try {
         const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
             headers: {
-                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Authorization': authHeader,
                 'User-Agent': 'Centagon-Calculator',
                 'Accept': 'application/vnd.github.v3+json'
             }
@@ -311,11 +314,14 @@ async function fetchGistStudents() {
 
 async function saveGistStudents(students) {
     if (!GIST_ID || !GITHUB_TOKEN) return false;
+    const authHeader = (GITHUB_TOKEN.startsWith('Bearer ') || GITHUB_TOKEN.startsWith('token ')) 
+        ? GITHUB_TOKEN 
+        : `Bearer ${GITHUB_TOKEN}`;
     try {
         const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
             method: 'PATCH',
             headers: {
-                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Authorization': authHeader,
                 'User-Agent': 'Centagon-Calculator',
                 'Accept': 'application/vnd.github.v3+json',
                 'Content-Type': 'application/json'

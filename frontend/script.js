@@ -946,23 +946,53 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (refs.batchErrorMsg) refs.batchErrorMsg.classList.add('hidden');
+
         const fullBatchNum = `4${twoDigits}`;
         const hubInfo = HUB_DATA[currentSelectedHub] || HUB_DATA['BCK'];
-        currentUser.hub = currentSelectedHub;
-        currentUser.hub_name = hubInfo.name;
-        currentUser.batch = fullBatchNum;
-        currentUser.batch_code = `${currentSelectedHub} ${fullBatchNum}`;
+        const pendingUser = {
+            ...currentUser,
+            hub: currentSelectedHub,
+            hub_name: hubInfo.name,
+            batch: fullBatchNum,
+            batch_code: `${currentSelectedHub} ${fullBatchNum}`
+        };
 
-        localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
-        syncStudentToServer(currentUser);
-        closeMandatoryGate();
-        updateAuthUI();
-        closeAllModals();
-        showToast(`Welcome! Batch ${currentUser.batch_code} (${hubInfo.name}) confirmed.`);
+        if (refs.submitBatchBtn) {
+            refs.submitBatchBtn.disabled = true;
+            refs.submitBatchBtn.textContent = 'REGISTERING & SAVING...';
+        }
+
+        syncStudentToServer(pendingUser, (err, serverRecord) => {
+            if (refs.submitBatchBtn) {
+                refs.submitBatchBtn.disabled = false;
+                refs.submitBatchBtn.textContent = 'CONFIRM & ACCESS CALCULATOR \u2192';
+            }
+
+            if (err) {
+                if (refs.batchErrorMsg) {
+                    refs.batchErrorMsg.textContent = `Registration failed: ${err.message || 'Server error'}. Please check your connection and try again.`;
+                    refs.batchErrorMsg.classList.remove('hidden');
+                }
+                showToast(`Registration failed: ${err.message || 'Could not save to server'}`);
+                return;
+            }
+
+            // Persistence confirmed by authoritative server!
+            currentUser = pendingUser;
+            localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
+            closeMandatoryGate();
+            updateAuthUI();
+            closeAllModals();
+            showToast(`Welcome! Batch ${currentUser.batch_code} (${hubInfo.name}) confirmed.`);
+        });
     }
 
     function syncStudentToServer(user, onComplete) {
-        if (!user || !user.email) return;
+        if (!user || !user.email) {
+            if (typeof onComplete === 'function') onComplete(new Error('Missing user email'), null);
+            return;
+        }
 
         // Authoritative server synchronization
         fetch('/api/students', {
@@ -973,20 +1003,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 email: user.email,
                 picture: user.picture,
                 google_id: user.sub,
+                sub: user.sub,
                 hub: user.hub || '',
                 hub_name: user.hub_name || '',
                 batch: user.batch || '',
                 batch_code: user.batch_code || '',
                 user_agent: navigator.userAgent,
-                id_token: user.idToken || ''
+                id_token: user.idToken || '',
+                google_token: user.idToken || ''
             })
-        }).then(res => {
+        }).then(async res => {
+            let data = null;
+            try { data = await res.json(); } catch(e) {}
+
             if (!res.ok) {
-                console.warn(`Server registration sync failed with HTTP ${res.status}`);
-                return null;
+                const msg = (data && data.message) || `Server error (HTTP ${res.status})`;
+                console.warn(`Server registration sync failed with HTTP ${res.status}:`, msg);
+                if (typeof onComplete === 'function') onComplete(new Error(msg), null);
+                return;
             }
-            return res.json();
-        }).then(data => {
+
             if (data && data.student) {
                 const s = data.student;
                 // If server already had persistent hub/batch for this user, adopt it
@@ -1004,11 +1040,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateAuthUI();
                 }
                 if (typeof onComplete === 'function') {
-                    onComplete(data.student);
+                    onComplete(null, data.student);
+                }
+            } else {
+                if (typeof onComplete === 'function') {
+                    onComplete(new Error('Invalid response from student registry API'), null);
                 }
             }
         }).catch(err => {
             console.warn('Could not sync student to server:', err);
+            if (typeof onComplete === 'function') {
+                onComplete(err, null);
+            }
         });
     }
 
@@ -1018,7 +1061,10 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/students/calc', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({
+                email,
+                google_id: currentUser ? currentUser.sub : undefined
+            })
         }).catch(() => {});
     }
 
@@ -1165,34 +1211,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (refs.gateTitle) refs.gateTitle.textContent = 'SIGN IN';
         if (refs.gateSubtitle) refs.gateSubtitle.textContent = 'Sign in with Google to access the 400-Series Exam Calculator.';
 
+        if (refs.gateSubtitle) refs.gateSubtitle.textContent = 'Verifying student profile with server...';
+
         // Synchronize with backend and check if returning user already has a saved hub & batch
-        syncStudentToServer(currentUser, (serverRecord) => {
+        syncStudentToServer(currentUser, (err, serverRecord) => {
+            if (err) {
+                console.warn('Initial server sync warning:', err);
+            }
             if (serverRecord && serverRecord.batch && serverRecord.hub) {
                 currentUser.batch = serverRecord.batch;
                 currentUser.hub = serverRecord.hub;
                 currentUser.hub_name = serverRecord.hub_name || '';
                 currentUser.batch_code = serverRecord.batch_code || '';
                 localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
-            }
-            if (!currentUser.batch || !currentUser.hub) {
-                showBatchGate(false);
-                showToast(`Signed in as ${currentUser.name}. Please select your Hub & Batch.`);
-            } else {
                 updateAuthUI();
                 closeAllModals();
+                closeMandatoryGate();
                 showToast(`Welcome back, ${currentUser.name}! Calculator unlocked.`);
+            } else {
+                showBatchGate(false);
+                showToast(`Signed in as ${currentUser.name}. Please select your Hub & Batch.`);
             }
         });
-
-        // Prompt for batch if not yet known
-        if (!currentUser.batch || !currentUser.hub) {
-            showBatchGate(false);
-            showToast(`Signed in as ${currentUser.name}. Please select your Hub & Batch.`);
-        } else {
-            updateAuthUI();
-            closeAllModals();
-            showToast(`Welcome back, ${currentUser.name}! Calculator unlocked.`);
-        }
     }
 
     function initGoogleAuth() {

@@ -842,10 +842,11 @@
             // Filter helper to purge dummy test records (only explicit mocks)
             function isTestDummy(s) {
                 if (!s) return true;
+                if (s.is_test === true) return true;
                 const email = (s.email || '').toLowerCase().trim();
                 const name = (s.name || '').toLowerCase().trim();
-                if (name.includes('test student') || name.includes('alice student')) return true;
                 if (email === 'alice@student.edu' || email === 'test.student@centagon.in') return true;
+                if (name === 'test student' || name === 'alice student') return true;
                 return false;
             }
 
@@ -853,6 +854,7 @@
             const SEED_STUDENTS = [];
 
             let allStudents = [];
+            let rawServerStudents = [];
             let currentFilterHub = 'ALL';
             let currentSearchQuery = '';
 
@@ -882,6 +884,9 @@
                 const queryKey = urlParams.get('key') || urlParams.get('pin') || urlParams.get('token');
                 if (queryKey === ADMIN_DEFAULT_PASSCODE) {
                     sessionStorage.setItem('centagon_admin_unlocked', 'true');
+                    try {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    } catch(e) {}
                     return true;
                 }
 
@@ -969,6 +974,11 @@
                         headers: { 'Authorization': 'Bearer ' + ADMIN_DEFAULT_PASSCODE }
                     });
 
+                    if (res.status === 404 || res.status === 401) {
+                        showGateModal();
+                        return;
+                    }
+
                     if (!res.ok) {
                         throw new Error(`Server returned HTTP ${res.status} (${res.statusText || 'Error'})`);
                     }
@@ -980,6 +990,7 @@
 
                     if (apiErrorEl) apiErrorEl.style.display = 'none';
 
+                    rawServerStudents = data.students;
                     allStudents = data.students.filter(s => !isTestDummy(s));
                     allStudents.forEach((s, idx) => {
                         s.id = idx + 1;
@@ -1011,6 +1022,16 @@
                 // Calculate KPIs
                 const totalStudents = allStudents.length;
                 metricTotalStudents.textContent = totalStudents;
+
+                const metricSubEl = document.querySelector('.metric-card.accent-red .metric-sub');
+                if (metricSubEl) {
+                    const testCount = (rawServerStudents.length || 0) - allStudents.length;
+                    if (testCount > 0) {
+                        metricSubEl.textContent = `Across all hubs (${rawServerStudents.length} stored, ${testCount} test excluded)`;
+                    } else {
+                        metricSubEl.textContent = 'Across all Centagon hubs';
+                    }
+                }
 
                 // Active Today
                 const todayPrefix = new Date().toISOString().slice(0, 10);

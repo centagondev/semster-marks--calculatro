@@ -135,12 +135,15 @@ def register_student(payload: dict):
 def track_calc(payload: dict):
     from datetime import datetime
     email = (payload.get("email") or "").strip().lower()
-    if not email:
+    google_id = (payload.get("google_id") or payload.get("sub") or "").strip()
+    if not email and not google_id:
         return {"status": "skipped"}
     students = _get_students()
     now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     for s in students:
-        if s.get("email", "").lower() == email:
+        matches_id = google_id and s.get("google_id") == google_id
+        matches_email = email and s.get("email", "").lower() == email
+        if matches_id or matches_email:
             s["calculations_count"] = s.get("calculations_count", 0) + 1
             s["last_active"] = now_iso
             _save_students(students)

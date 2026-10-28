@@ -63,6 +63,32 @@ ADMIN_EMAILS = set(
     ).split(",") if e.strip()
 )
 
+# Cloud KV / Upstash Configuration
+KV_URL = os.environ.get("KV_REST_API_URL") or os.environ.get("UPSTASH_REDIS_REST_URL") or ""
+KV_TOKEN = os.environ.get("KV_REST_API_TOKEN") or os.environ.get("UPSTASH_REDIS_REST_TOKEN") or ""
+
+
+def execute_kv_command(command_array):
+    if not KV_URL or not KV_TOKEN:
+        return None
+    try:
+        clean_url = KV_URL.rstrip("/")
+        req = urllib.request.Request(
+            clean_url,
+            data=json.dumps(command_array).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {KV_TOKEN}",
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data.get("result")
+    except Exception as e:
+        logger.error("KV command error: %s", e)
+        return None
+
 
 def redact_identifier(val):
     if not val:
@@ -236,6 +262,15 @@ if not STUDENTS_FILE.exists():
 
 def get_all_students():
     with db_lock:
+        if KV_URL and KV_TOKEN:
+            res = execute_kv_command(["GET", "centagon_students"])
+            if res:
+                try:
+                    parsed = json.loads(res) if isinstance(res, str) else res
+                    if isinstance(parsed, list):
+                        return parsed
+                except Exception as e:
+                    logger.error("Failed to parse KV students: %s", e)
         if not STUDENTS_FILE.exists():
             return []
         try:
@@ -251,6 +286,12 @@ load_students = get_all_students
 
 def save_students(students_list):
     with db_lock:
+        cloud_saved = False
+        if KV_URL and KV_TOKEN:
+            res = execute_kv_command(["SET", "centagon_students", json.dumps(students_list, ensure_ascii=False)])
+            if res == "OK" or res is not None:
+                cloud_saved = True
+
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         temp_file = STUDENTS_FILE.with_suffix(".tmp")
         try:
@@ -265,6 +306,8 @@ def save_students(students_list):
                     temp_file.unlink()
                 except Exception:
                     pass
+            if cloud_saved:
+                return True
             raise
 
 
@@ -310,8 +353,10 @@ def upsert_student(data, verified_claims=None, req_id=None):
     if req_id is None:
         req_id = uuid.uuid4().hex[:12]
 
-    if verified_claims is None and data.get("google_token"):
-        verified_claims = verify_google_jwt(data.get("google_token"), expected_email=data.get("email"), req_id=req_id)
+    if verified_claims is None:
+        token_to_verify = data.get("id_token") or data.get("google_token")
+        if token_to_verify:
+            verified_claims = verify_google_jwt(token_to_verify, expected_email=data.get("email"), req_id=req_id)
 
     # Prioritize verified claims from server-side validated token
     google_id = (

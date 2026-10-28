@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
-data/*.json
+data/test_*.json
+data/*.tmp
 node_modules/
 *.log
 capture_*.js
